@@ -158,3 +158,15 @@ C# add-in 原本把面板命名为 `Excel Tools`，pyRevit 那边则是 `Table`�
 ```
 EZbuild ▸ Table ▸ Import Excel · Refresh · Cleanup
 ```
+
+### D8 — 邮箱暂不更改（2026-08-29）
+
+原计划把 `pitayadesign.ezbuild@gmail.com` 换成 `…@ezbuild.co.nz`。
+**未执行**，因为 `@ezbuild.co.nz` 的邮箱尚未建立，改了会让一个**能收信的**
+联系方式变成收不到信的——网站上的 "Request Access" 按钮正指向它。
+
+待办（需先建信箱，再一次性替换）：
+
+* `frontend/index.html` 的 `mailto:` CTA
+* `frontend/spec-viewer.html:280` 报告页脚的 `companySub`
+* Autodesk App Store listing 的 support email
