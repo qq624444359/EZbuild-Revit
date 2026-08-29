@@ -1,0 +1,137 @@
+# EZbuild for Revit — 仓库合并与命名收敛
+
+**日期：** 2026-08-29
+**状态：** 已批准，实施中
+**范围：** 项目 1（合并仓库 + 命名收敛）与项目 2（网站插件落地页）。Live Audit 明确不在本次范围内。
+
+---
+
+## 背景
+
+三个仓库同时在用三套名字，用户在 Revit 里会看到两个互不相干的选项卡
+（`EZTable` 和 `Pitaya`），没有任何东西表明它们出自同一个作者。同时
+`EZbuild` 一词既是母品牌又是审图网站的产品名。
+
+此刻做收敛的成本接近于零：EZbuild 网站零用户零推广，EZTable 上周才上架
+Autodesk App Store，EZDrawing 一个 commit 都没有。每推迟一天成本都更高。
+
+## 决策
+
+### D1 — 品牌层级
+
+| 层 | 名字 | 用户在哪看到 |
+|---|---|---|
+| 品牌 / 公司 | **EZbuild** | 域名 ezbuild.co.nz、LICENSE、邮箱、App Store publisher |
+| 网页产品 | **EZbuild** | 网站本身（不改名） |
+| Revit 产品 | **EZbuild for Revit** | Revit 里一个选项卡，名为 `EZbuild` |
+| 功能（非产品） | Table · Sheets · Audit | 该选项卡下的各个面板 |
+
+`Pitaya` 退场，仅保留为个人/法律署名。
+
+### D2 — 合并成一个仓库
+
+`EZbuild-Revit` 同时容纳 pyRevit extension 与 C# add-in。
+`EZTable` 与 `EZDrawing` 归档，README 指向此处。
+
+理由：pyRevit extension 必须是**一个**用户可安装的文件夹，才能保证多个面板
+合并进同一个选项卡；跨 extension 的同名 tab 合并行为不确定，不值得赌。
+
+### D3 — C# 程序集名保持 `EZTable`
+
+程序集是 Table **功能**的实现，名字是准确的。品牌属于 ribbon tab，不属于 dll。
+以后 Audit 的 C# 版就是 `revit-addin/EZAudit/`，一个功能一个程序集，
+各自往 `EZbuild` 选项卡挂 panel。
+
+`App.cs` 现有的 `CreateRibbonTab` try/catch 已经支持这种共用：
+
+```csharp
+try { application.CreateRibbonTab(tabName); }
+catch (Autodesk.Revit.Exceptions.ArgumentException) { /* 已存在，忽略 */ }
+```
+
+改程序集名需触碰 csproj、.addin 三个字段、18 个 .cs 的命名空间、
+`App.cs:82` 的资源路径与 `EZTable.config` 文件名，而用户屏幕上不会有任何变化。
+**明确不做。**
+
+### D4 — v1 只发布 Table 面板
+
+Live Audit 尚未开发。现有的 `Audit.pushbutton` 是排版项目的开发脚手架
+（read-only sheet scan），且绑死作者事务所的 A3 标准
+（`config.py` 中 `TITLEBLOCK_X = 370` 等数值量自其自有的 6 个项目、296 页图纸），
+他人运行会产生大量假错。
+
+更重要的是：叫 `Audit` 会让用户误以为那就是 EZbuild 的 NZBC 合规审查，
+从而损伤尚未推广的主产品叙事。**`Audit` 一词保留给引擎，等 Live Audit 落地再启用。**
+
+未发布的代码进 `wip/`，位于 `.extension` 之外，因此 pyRevit 不会加载。
+
+### D5 — App Store listing 名保持 `EZTable`
+
+这是功能名，用户搜索的是 "excel table revit"。publisher 写 EZbuild 即可。
+`ClientId` (`B8454D13-4015-4D78-9842-8EE553D0DB01`) **不得更改**——Revit 靠它识别插件。
+
+---
+
+## 目标结构
+
+```
+EZbuild-Revit/
+  .gitignore                       挡住 *.pdf *.rvt 与构建产物
+  README.md / README.zh-CN.md
+  LICENSE                          MIT © 2026 EZbuild
+  pyrevit/
+    EZbuild.extension/
+      EZbuild.tab/
+        bundle.yaml                title: EZbuild
+        A_Table.panel/             ← EZTable/pyrevit 的 Table.panel
+      lib/eztable/
+  revit-addin/
+    EZTable/                       C# 程序集（名字不变）
+  wip/                             pyRevit 不加载
+    sheets/                        ← EZDrawing B_Sheets + C_Layout
+    audit/                         ← 现有 Sheet Audit 脚本
+    lib/ezbuild/                   ← 原 lib/pitaya
+  docs/
+```
+
+## 改名清单
+
+| 位置 | 现在 | 改成 |
+|---|---|---|
+| `revit-addin/EZTable/App.cs:13` | `tabName = "EZTable"` | `"EZbuild"` |
+| pyRevit extension 目录 | `EZTable.extension` | `EZbuild.extension` |
+| pyRevit tab 目录 | `EZTable.tab` | `EZbuild.tab` |
+| pyRevit tab bundle | （无） | 新建 `bundle.yaml` → `title: EZbuild` |
+| Table 面板目录 | `Table.panel` | `A_Table.panel` |
+| wip 库 | `lib/pitaya` | `lib/ezbuild`（含 import 改写） |
+| `audit-system/frontend/spec-viewer.html:280` | `pitayadesign.ezbuild@gmail.com` | `…@ezbuild.co.nz` |
+
+## 项目 2 — 网站插件落地页
+
+* 新增 `audit-system/frontend/for-revit.html`，复用 index 的 nav / footer /
+  主题初始化脚本
+* `index.html:186` 导航增加 `For Revit`
+* `index.html:698` footer Platform 区增加同一条
+* 首页 `#how-it-works` 之后插入一个小 section（一句话 + 一个按钮）。
+  **不动 hero**——审图 SaaS 的主叙事不稀释
+
+落地页需承载 App Store listing 的 Homepage 字段，因此必须在作者登录
+Autodesk 修改 listing **之前**上线。
+
+## 执行顺序
+
+1. `EZDrawing/.gitignore` — 堵住客户图纸外泄（已完成）
+2. 建 `EZbuild-Revit` 仓库骨架 + 本设计文档（已完成）
+3. 搬入 EZTable（pyrevit + revit-addin），改 tab 名
+4. 搬入 EZDrawing 代码到 `wip/`，`lib/pitaya` → `lib/ezbuild`
+5. README / LICENSE；EZTable 与 EZDrawing 仓库加归档提示
+6. 网站：`for-revit.html` + 导航 + footer + 首页 section
+7. （作者执行）Revit 构建、重拍截图、一次性提交 App Store 更新
+
+## 明确不做
+
+* 不改 C# 程序集 / 命名空间 / 目录名（D3）
+* 不改 App Store listing 名（D5）
+* 不发布 Sheets / Layout / Audit 面板（D4）
+* 不做 Live Audit — 单独立项，需另写 spec：API 认证、user_id 获取、
+  计费路径、以及从 23 条中挑出适合模型级检查的子集

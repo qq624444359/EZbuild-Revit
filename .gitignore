@@ -1,0 +1,24 @@
+# ── Client project files — NEVER commit ──────────────────────────
+*.pdf
+*.rvt
+*.rfa
+*.rte
+*.rws
+*.rvt.[0-9]*
+*.rfa.[0-9]*
+
+# Build output
+bin/
+obj/
+*.user
+
+# Local add-in config (holds machine paths)
+EZTable.config
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Windows
+Thumbs.db
+desktop.ini
