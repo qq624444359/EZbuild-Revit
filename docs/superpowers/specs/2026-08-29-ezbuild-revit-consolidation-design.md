@@ -90,7 +90,7 @@ EZbuild-Revit/
   wip/                             pyRevit 不加载
     sheets/                        ← EZDrawing B_Sheets + C_Layout
     audit/                         ← 现有 Sheet Audit 脚本
-    lib/ezbuild/                   ← 原 lib/pitaya
+    lib/ezsheets/                  ← 原 lib/pitaya
   docs/
 ```
 
@@ -103,7 +103,7 @@ EZbuild-Revit/
 | pyRevit tab 目录 | `EZTable.tab` | `EZbuild.tab` |
 | pyRevit tab bundle | （无） | 新建 `bundle.yaml` → `title: EZbuild` |
 | Table 面板目录 | `Table.panel` | `A_Table.panel` |
-| wip 库 | `lib/pitaya` | `lib/ezbuild`（含 import 改写） |
+| wip 库 | `lib/pitaya` | `lib/ezsheets`（含 import 改写） |
 | `audit-system/frontend/spec-viewer.html:280` | `pitayadesign.ezbuild@gmail.com` | `…@ezbuild.co.nz` |
 
 ## 项目 2 — 网站插件落地页
@@ -123,7 +123,7 @@ Autodesk 修改 listing **之前**上线。
 1. `EZDrawing/.gitignore` — 堵住客户图纸外泄（已完成）
 2. 建 `EZbuild-Revit` 仓库骨架 + 本设计文档（已完成）
 3. 搬入 EZTable（pyrevit + revit-addin），改 tab 名
-4. 搬入 EZDrawing 代码到 `wip/`，`lib/pitaya` → `lib/ezbuild`
+4. 搬入 EZDrawing 代码到 `wip/`，`lib/pitaya` → `lib/ezsheets`
 5. README / LICENSE；EZTable 与 EZDrawing 仓库加归档提示
 6. 网站：`for-revit.html` + 导航 + footer + 首页 section
 7. （作者执行）Revit 构建、重拍截图、一次性提交 App Store 更新
@@ -135,3 +135,26 @@ Autodesk 修改 listing **之前**上线。
 * 不发布 Sheets / Layout / Audit 面板（D4）
 * 不做 Live Audit — 单独立项，需另写 spec：API 认证、user_id 获取、
   计费路径、以及从 23 条中挑出适合模型级检查的子集
+
+---
+
+## 实施期修订
+
+### D6 — wip 库命名为 `ezsheets` 而非 `ezbuild`（2026-08-29）
+
+原文写的是 `lib/pitaya` → `lib/ezbuild`。实施时改为 **`lib/ezsheets`**，理由：
+
+* 与 `lib/eztable` 形成对仗——一个功能一个库，`eztable` / `ezsheets`
+* `ezbuild` 是**品牌**，不该被占用为某一个功能的模块名。将来真有跨功能的共享
+  代码时，`ezbuild` 这个名字还留着
+
+影响面为零：这些代码在 `wip/` 内，未发布，无外部引用。
+
+### D7 — 两条安装路线的 ribbon 对齐（2026-08-29）
+
+C# add-in 原本把面板命名为 `Excel Tools`，pyRevit 那边则是 `Table`。
+已统一为 **`Table`**（`App.cs:24`），使两条安装路线在 ribbon 上完全一致：
+
+```
+EZbuild ▸ Table ▸ Import Excel · Refresh · Cleanup
+```

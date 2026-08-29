@@ -1,0 +1,8 @@
+title: Pack Details
+tooltip: >
+  Re-lay the viewports on a detail sheet into a tidy column grid.
+  Runs in preview mode first - nothing is moved until you confirm.
+  Column pitch 42 mm (measured), vertical space distributed evenly.
+  If the views cannot fit it reports how much gap would be needed
+  rather than drawing off the paper.
+author: EZbuild

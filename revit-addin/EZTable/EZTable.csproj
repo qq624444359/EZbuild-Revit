@@ -1,0 +1,86 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>EZTable</AssemblyName>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Platforms>x64</Platforms>
+    <PlatformTarget>x64</PlatformTarget>
+    <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>12</LangVersion>
+
+    <!--
+      Two build targets: net8.0 for Revit 2025/2026, net48 for Revit 2022-2024.
+      With only one version installed, name a single target on the command line
+      rather than editing this file:
+          dotnet build -c Release -p:TargetFrameworks=net8.0-windows
+    -->
+    <TargetFrameworks Condition="'$(TargetFrameworks)' == ''">net48;net8.0-windows</TargetFrameworks>
+  </PropertyGroup>
+
+  <!--
+    Where the Revit API lives. The default is the standard install path; for an
+    install elsewhere, or a different version, override on the command line
+    rather than editing this file:
+        dotnet build -p:RevitVersion=2025
+        dotnet build -p:RevitApiDir="D:\Autodesk\Revit 2026"
+  -->
+  <PropertyGroup>
+    <RevitVersion Condition="'$(RevitVersion)' == ''">2026</RevitVersion>
+    <RevitVersionNet48 Condition="'$(RevitVersionNet48)' == ''">2024</RevitVersionNet48>
+
+    <RevitApiDir Condition="'$(RevitApiDir)' == '' And '$(TargetFramework)' == 'net8.0-windows'">C:\Program Files\Autodesk\Revit $(RevitVersion)</RevitApiDir>
+    <RevitApiDir Condition="'$(RevitApiDir)' == '' And '$(TargetFramework)' == 'net48'">C:\Program Files\Autodesk\Revit $(RevitVersionNet48)</RevitApiDir>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' != ''">
+    <Reference Include="RevitAPI">
+      <HintPath>$(RevitApiDir)\RevitAPI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="RevitAPIUI">
+      <HintPath>$(RevitApiDir)\RevitAPIUI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- Say something readable when RevitAPI.dll is missing, instead of a wall
+       of "the type Document could not be found" -->
+  <Target Name="CheckRevitApi" BeforeTargets="ResolveAssemblyReferences" Condition="'$(TargetFramework)' != ''">
+    <Error Condition="!Exists('$(RevitApiDir)\RevitAPI.dll')"
+           Text="RevitAPI.dll not found at &quot;$(RevitApiDir)&quot;. Point the build at your Revit install with -p:RevitApiDir=&quot;C:\Path\To\Revit&quot; or -p:RevitVersion=2025, or build a single target with -p:TargetFrameworks=net8.0-windows." />
+  </Target>
+
+  <ItemGroup>
+    <PackageReference Include="ClosedXML" Version="0.102.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\*.png" />
+  </ItemGroup>
+
+  <!-- The sample config follows the build output. Once renamed to
+       EZTable.config it will not be overwritten by the next build. -->
+  <ItemGroup>
+    <None Update="EZTable.config.sample">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <!-- After a successful build, copy everything into the Revit addins folder -->
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(TargetFramework)' == 'net8.0-windows'">
+    <PropertyGroup>
+      <AddinDir>$(AppData)\Autodesk\Revit\Addins\$(RevitVersion)</AddinDir>
+      <TargetAddinDir>$(AddinDir)\EZTable</TargetAddinDir>
+    </PropertyGroup>
+    <MakeDir Directories="$(AddinDir)" />
+    <MakeDir Directories="$(TargetAddinDir)" />
+    <Copy SourceFiles="$(ProjectDir)EZTable.addin" DestinationFolder="$(AddinDir)" />
+    <Copy SourceFiles="$(ProjectDir)EZTable.config.sample" DestinationFolder="$(TargetAddinDir)" />
+    <ItemGroup>
+      <BuiltDlls Include="$(TargetDir)*.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(BuiltDlls)" DestinationFolder="$(TargetAddinDir)" />
+  </Target>
+</Project>

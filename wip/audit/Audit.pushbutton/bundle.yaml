@@ -1,0 +1,6 @@
+title: Sheet Audit
+tooltip: >
+  Read-only scan of the current project: title block family, whether sheets are A3,
+  which standard detail sheets are missing, view types on detail sheets,
+  and what carries the note text. Nothing is modified - safe to run first.
+author: EZbuild

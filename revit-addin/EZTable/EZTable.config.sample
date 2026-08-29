@@ -1,0 +1,74 @@
+# EZTable drafting standards
+#
+# To use: rename this file to EZTable.config and leave it next to EZTable.dll
+#         (normally %AppData%\Autodesk\Revit\Addins\2026\), then restart Revit.
+#         Renaming matters -- a .sample file is overwritten by the next build,
+#         a .config file is not.
+#
+# Every line is key = value; # starts a comment. Delete or comment out a line to
+# fall back to its default. The values shown below are the defaults.
+
+# ---------------------------------------------------------------- line styles
+# Which project line style draws each Excel border weight
+LineStyleThin   = <Thin Lines>
+LineStyleMedium = <Medium Lines>
+LineStyleThick  = <Wide Lines>
+
+# ---------------------------------------------------------------- fills
+# Grey shading always uses this existing type; set to none to create types
+# automatically by colour instead
+GreyFillTypeName = Fill Grey 192
+# A colour counts as grey when the spread across R/G/B is no more than this
+GreyTolerance    = 12
+# How far an Excel grey may sit from the level in GreyFillTypeName and still be
+# drawn with it. Beyond this a faithful "Fill Grey <level>" type is created, so
+# light shading does not come out darker than the source.
+GreySnapTolerance = 16
+# Name prefix for automatically created fill types, e.g. Fill Orange EE822F
+FillTypePrefix   = Fill
+# White shading is not drawn -- the sheet background is white anyway
+SkipWhiteFill    = true
+
+# ---------------------------------------------------------------- text
+# Derive from this existing type; bold, italic and coloured variants are copies
+# of it. Set to none to build types purely from Excel's own font and size.
+BaseTextTypeName = 2.0mm Arial
+# The base type above stands for Excel text at this point size; other sizes are
+# drawn proportionally, so a 9pt sheet keeps the same text-to-cell ratio as a
+# 7pt one. Set ScaleTextToExcel = false to force every cell to the base size.
+ScaleTextToExcel = true
+BaseTextSizePt   = 7.0
+
+# ---------------------------------------------------------------- view naming
+# Supports {sheet} (worksheet name) and {file} (file name without extension).
+# A name already in use gets a (1) (2) suffix automatically.
+#   Table            -> Table, Table (1), Table (2) ...
+#   Table - {sheet}  -> Table - Summary
+#   {file} {sheet}   -> Area Schedule Summary
+ViewNameTemplate = Table
+
+# ---------------------------------------------------- splitting wide tables
+# When a table is too wide for A3, it is split by column and stacked downwards,
+# every block staying 1:1. Do not change the view scale instead -- text size is
+# fixed on paper, so scaling desynchronises text from cells.
+# Set to 0 to disable splitting.
+MaxTableWidthMm   = 380
+BlockGapMm        = 10
+# Repeat the first N columns (row headers) at the start of each block; 0 = off
+RepeatLeadingCols = 1
+
+# ---------------------------------------------------------------- fit to text
+# The default is to fit the table to its text: font size stays fixed, and
+# anything that does not fit widens the column and heightens the row.
+# Set all three to false for a strict 1:1 copy of Excel's row and column sizes,
+# where text that does not fit simply runs up to the border.
+WrapText    = true
+FitColumns  = true
+FitRows     = true
+# How many times its original size one column or row may grow, so extreme
+# content cannot blow the table apart
+MaxColGrowth = 4.0
+MaxRowGrowth = 6.0
+# Padding around the text, in millimetres
+CellPaddingHMm = 0.8
+CellPaddingVMm = 0.4

@@ -1,0 +1,6 @@
+title: Measure Layout
+tooltip: >
+  Read-only. Measures the real outline and spacing of every viewport on the
+  selected sheets and reports suggested values for GAP_X / GAP_Y / TITLE_H.
+  Calibrate these from real drawings before writing the packing algorithm.
+author: EZbuild

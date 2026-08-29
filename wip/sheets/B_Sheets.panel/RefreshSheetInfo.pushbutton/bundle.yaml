@@ -1,0 +1,6 @@
+title: Update Titleblock
+tooltip: >
+  Batch-write project number, project name, address, date, drawn by, checked by
+  and revision into Project Information and every sheet's title block.
+  Blank fields are skipped, existing values are never cleared.
+author: EZbuild

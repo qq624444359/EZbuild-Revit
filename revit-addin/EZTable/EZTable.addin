@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RevitAddIns>
+  <AddIn Type="Application">
+    <Name>EZTable</Name>
+    <Assembly>EZTable\EZTable.dll</Assembly>
+    <ClientId>B8454D13-4015-4D78-9842-8EE553D0DB01</ClientId>
+    <FullClassName>EZTable.App</FullClassName>
+    <VendorId>com.ezbuild</VendorId>
+    <VendorDescription>EZbuild</VendorDescription>
+  </AddIn>
+</RevitAddIns>
