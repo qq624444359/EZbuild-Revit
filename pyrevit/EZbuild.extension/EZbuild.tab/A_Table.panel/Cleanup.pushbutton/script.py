@@ -37,7 +37,7 @@ doc = revit.doc
 # EZ_ is the current prefix; XL_ is the legacy one from when this was XLTable.
 # Both only appear in fully-automatic mode. When config.py points at existing
 # project standards the generated names follow those instead ('Fill Grey 242',
-# '2.0mm Arial BOLD'), which is why the type-specific checks below also ask
+# '2.1mm Arial BOLD'), which is why the type-specific checks below also ask
 # config.py whether a name is one it would have produced.
 PREFIXES = ('EZ_', 'XL_')
 

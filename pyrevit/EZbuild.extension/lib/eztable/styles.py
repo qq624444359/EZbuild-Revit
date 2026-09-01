@@ -7,11 +7,11 @@ Existing drafting standards in the project are reused wherever possible
     line styles  <Thin Lines> / <Medium Lines> / <Wide Lines>
     fills        grey always uses Fill Grey 192; other colours are created
                  automatically under the same naming scheme
-    text         derived from 2.0mm Arial; bold, italic and coloured variants
+    text         derived from 2.1mm Arial; bold, italic and coloured variants
                  are copies of it
 
 **Types that already exist are never modified.** The Fill Grey 192 and
-2.0mm Arial you maintain are only read and copied; this tool will never
+2.1mm Arial you maintain are only read and copied; this tool will never
 overwrite them.
 
 Three traps found by measurement, none of them mentioned in the spec:

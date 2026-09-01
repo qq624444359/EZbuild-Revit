@@ -155,7 +155,7 @@ namespace EZTable.Revit
             {
                 // The base type stands for Excel text at Config.BaseTextSizePt; any
                 // other size gets a proportionally scaled copy, named the way the
-                // project names things: "2.0mm Arial" -> "2.6mm Arial".
+                // project names things: "2.1mm Arial" -> "2.6mm Arial".
                 double? baseCap = BaseTextCapHeightFt();
                 scale = Core.Config.TextScale(sizePt);
                 scaled = baseCap != null && baseCap.Value > 0 && Math.Abs(scale - 1.0) > 1e-6;

@@ -58,11 +58,29 @@ SKIP_WHITE_FILL = True
 # Derive from this existing type. Bold, italic and coloured variants are copies
 # of it, inheriting font and size exactly and changing only weight, slant and
 # colour:
-#   2.0mm Arial              plain black text
-#   2.0mm Arial Bold         bold
-#   2.0mm Arial Red E24D4E   red
+#   2.1mm Arial              plain black text
+#   2.1mm Arial Bold         bold
+#   2.1mm Arial Red E24D4E   red
 # Set to None to build EZ_* types purely from Excel's own font and size.
-BASE_TEXT_TYPE_NAME = '2.0mm Arial'
+#
+# Plain black text at the base size uses this type *as-is* -- it is never
+# duplicated and never modified, so whatever background it carries is what gets
+# drawn. Derived types (bold, coloured, resized) are copies with their
+# background forced to Transparent, so a base type with an opaque background
+# makes plain cells hide the fill and borders underneath while every other cell
+# does not. Point this at a type whose background is Transparent; the 2.1mm one
+# exists for exactly that reason, the 2.0mm standard being opaque.
+BASE_TEXT_TYPE_NAME = '2.1mm Arial'
+
+# Text types Cleanup must never offer for deletion, however much they look like
+# something this tool generated.
+#
+# A type whose name differs from the base only in the size token -- '2.0mm Arial'
+# against a '2.1mm Arial' base -- is indistinguishable from a resized copy, and
+# the 2.0mm standard is exactly that case: your own type, still used by
+# everything other than EZTable. Exact names only; modifiers are not covered,
+# because '2.0mm Arial BOLD' really is leftover once the base moves on.
+PROTECTED_TEXT_TYPE_NAMES = ('2.0mm Arial',)
 
 # The base type above represents Excel text at this point size. Text at any other
 # size is drawn proportionally larger or smaller, so a sheet set in 9pt keeps the
@@ -114,7 +132,7 @@ REPORT_MODE = 'auto'
 # ---------------------------------------------------------------- fit to text
 #
 # The default is to fit the table to its text, not to make the text put up with
-# the table. Font size stays at a comfortable 2.0mm (on A3); anything that does
+# the table. Font size stays at a comfortable 2.1mm (on A3); anything that does
 # not fit widens the column and heightens the row.
 #
 # Turn all of them off for a strict 1:1 copy of Excel's row and column sizes,
@@ -197,15 +215,15 @@ def text_type_name(base_name, bold, italic, rgb_hex, disambiguate=False):
     """
     Name for a derived text type, following the project's existing convention
     of uppercase modifiers:
-        2.0mm Arial
-        2.0mm Arial BOLD
-        2.0mm Arial RED
-        2.0mm Arial BOLD RED
+        2.1mm Arial
+        2.1mm Arial BOLD
+        2.1mm Arial RED
+        2.1mm Arial BOLD RED
 
     disambiguate=True appends the hex after the colour name. It is only needed
     when a type of that name already exists in a different colour, to stop two
     different reds colliding:
-        2.0mm Arial RED E24D4E
+        2.1mm Arial RED E24D4E
     """
     parts = [base_name]
     if bold:
@@ -248,7 +266,7 @@ def resize_text_type_name(base_name, cap_mm):
     Name for a scaled copy of the base text type, following the project's own
     convention of leading the name with the size:
 
-        '2.0mm Arial' at 2.57mm -> '2.6mm Arial'
+        '2.1mm Arial' at 2.57mm -> '2.6mm Arial'
 
     When the base name carries no size token there is nothing to substitute, so
     the size is appended instead:
@@ -288,7 +306,7 @@ def snaps_to_grey_type(rgb_hex, type_name, tolerance=None):
 # Cleanup needs to recognise what this tool created. The EZ_ / XL_ prefixes only
 # cover the fully-automatic mode; when the config points at existing project
 # standards the generated names follow those instead ('Fill Grey 242',
-# '2.0mm Arial BOLD'), and a prefix scan finds nothing at all.
+# '2.1mm Arial BOLD'), and a prefix scan finds nothing at all.
 
 _MODIFIER_RE = re.compile(r'^(?:BOLD|ITALIC|GREY|[A-Z]+|\d{1,3}|[0-9A-F]{6})$')
 
@@ -312,13 +330,16 @@ def is_generated_fill_name(name):
 def is_derived_text_name(name):
     """
     True for a text type derived from BASE_TEXT_TYPE_NAME -- the base name, or a
-    resized variant of it, plus uppercase modifiers: '2.0mm Arial BOLD',
+    resized variant of it, plus uppercase modifiers: '2.1mm Arial BOLD',
     '2.6mm Arial', '2.6mm Arial BOLD RED'. The base type itself is excluded, and
     so is any name that merely happens to start the same way ('3.5mm Arial
-    Titles' keeps its lowercase word and is left alone).
+    Titles' keeps its lowercase word and is left alone). Names listed in
+    PROTECTED_TEXT_TYPE_NAMES are excluded as well.
     """
     base = BASE_TEXT_TYPE_NAME
     if not base or not name or name == base:
+        return False
+    if name in PROTECTED_TEXT_TYPE_NAMES:
         return False
 
     parts = name.split()

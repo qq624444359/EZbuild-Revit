@@ -232,6 +232,12 @@ exactly what the button exists to clear out.
 Anything still in use is listed for you to see but **never touched** — your
 elements are never taken down with it.
 
+It also recognises the types generated from your own standards (`2.1mm Arial
+BOLD`, `Fill Grey 242`), which is why the base type and the names in
+`PROTECTED_TEXT_TYPE_NAMES` are excluded from the scan: after the base moved
+from `2.0mm Arial` to `2.1mm Arial`, your `2.0mm Arial` looks exactly like a
+resized copy, and it must never be offered for deletion.
+
 ---
 
 # Adjusting the common things
@@ -330,7 +336,7 @@ LINE_STYLE_NAMES = {
     'thick':  '<Wide Lines>',
 }
 GREY_FILL_TYPE_NAME = 'Fill Grey 192'    # grey shading always uses this existing type
-BASE_TEXT_TYPE_NAME = '2.0mm Arial'      # base text type
+BASE_TEXT_TYPE_NAME = '2.1mm Arial'      # base text type
 ```
 
 `GREY_SNAP_TOLERANCE` (default 16) decides how close an Excel grey has to be to
@@ -340,11 +346,14 @@ not come out darker than the source. Raise it to force more greys on to your
 standard type; set `GREY_FILL_TYPE_NAME = None` to always be faithful.
 
 Put your own type names in. **Types that already exist are only ever read, never
-modified** — the `Fill Grey 192` and `2.0mm Arial` you maintain are read and
+modified** — the `Fill Grey 192` and `2.1mm Arial` you maintain are read and
 copied, and this tool will never overwrite them.
 
 When bold or red text is needed, the base type is **copied** into a derived one,
-named the way you name things (`2.0mm Arial BOLD`, `2.0mm Arial RED`).
+named the way you name things (`2.1mm Arial BOLD`, `2.1mm Arial RED`). Derived
+types are always given a **transparent** background; plain black text is drawn
+with the base type untouched, so give that type a transparent background too —
+an opaque one hides the shading and borders behind the text.
 
 Set all three to `None` for fully automatic behaviour: `EZ_*` types built
 straight from Excel's own fonts and sizes.

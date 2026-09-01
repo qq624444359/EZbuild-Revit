@@ -32,7 +32,14 @@ SkipWhiteFill    = true
 # ---------------------------------------------------------------- text
 # Derive from this existing type; bold, italic and coloured variants are copies
 # of it. Set to none to build types purely from Excel's own font and size.
-BaseTextTypeName = 2.0mm Arial
+# Plain black text uses this type as-is, so its background setting is the one
+# that gets drawn -- name a type whose background is Transparent.
+BaseTextTypeName = 2.1mm Arial
+# Text types Cleanup must never offer for deletion, comma separated. A type that
+# differs from the base only in its size token ("2.0mm Arial" against a "2.1mm
+# Arial" base) is indistinguishable from a resized copy of it, so the project's
+# own standards are listed here to keep them safe. Leave empty to protect none.
+ProtectedTextTypeNames = 2.0mm Arial
 # The base type above stands for Excel text at this point size; other sizes are
 # drawn proportionally, so a 9pt sheet keeps the same text-to-cell ratio as a
 # 7pt one. Set ScaleTextToExcel = false to force every cell to the base size.

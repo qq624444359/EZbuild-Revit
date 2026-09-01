@@ -211,6 +211,11 @@ Excel 改了之后按这个。插件会列出项目里所有导入过的视图�
 
 正在使用中的会列出来给你看，但**绝对不碰** —— 不会连带删掉你的图元。
 
+按你自己的标准生成的类型（`2.1mm Arial BOLD`、`Fill Grey 242`）也认得出来，
+所以基准类型本身和 `PROTECTED_TEXT_TYPE_NAMES` 里列的名字会被排除在扫描之外：
+基准类型从 `2.0mm Arial` 换成 `2.1mm Arial` 之后，你的 `2.0mm Arial`
+看上去就和一个改过字号的副本一模一样，绝不能拿去删。
+
 ---
 
 # 常见需求怎么调
@@ -299,7 +304,7 @@ LINE_STYLE_NAMES = {
     'thick':  '<Wide Lines>',
 }
 GREY_FILL_TYPE_NAME = 'Fill Grey 192'    # 灰色底纹一律用这个已有类型
-BASE_TEXT_TYPE_NAME = '2.0mm Arial'      # 文字基准类型
+BASE_TEXT_TYPE_NAME = '2.1mm Arial'      # 文字基准类型
 ```
 
 `GREY_SNAP_TOLERANCE`（默认 16）决定 Excel 的灰要离 `GREY_FILL_TYPE_NAME` 名字里那个
@@ -308,10 +313,12 @@ BASE_TEXT_TYPE_NAME = '2.0mm Arial'      # 文字基准类型
 则永远忠实还原。
 
 改成你项目里的类型名就行。**已经存在的类型一律只读不改** ——
-你维护的 `Fill Grey 192`、`2.0mm Arial` 只会被读取和复制，永远不会被这个工具改写。
+你维护的 `Fill Grey 192`、`2.1mm Arial` 只会被读取和复制，永远不会被这个工具改写。
 
 需要粗体、红字这些的时候，插件会**复制**基准类型派生一个子类型出来，
-命名跟着你的写法走（`2.0mm Arial BOLD`、`2.0mm Arial RED`）。
+命名跟着你的写法走（`2.1mm Arial BOLD`、`2.1mm Arial RED`）。派生出来的类型背景
+一律设成**透明**；普通黑字直接用基准类型本身，不作任何改动，所以基准类型的背景
+也要设成透明 —— 不透明的背景会把文字后面的底纹和边框挡掉。
 
 三个都设成 `None`，就回到全自动模式：完全按 Excel 的原始字体字号建 `EZ_*` 类型。
 </details>

@@ -165,6 +165,17 @@ XLTable. Both are scanned, because clearing out those legacy types is the whole
 point of the button — this is how the `XL_Arial_7_000000`, `XL_Fill_D9D9D9` and
 `XL_Thin` types left by versions before v0.4 get removed.
 
+The prefixes only cover fully-automatic mode. When the config points at existing
+project standards the generated names follow those instead, so
+`config.is_derived_text_name()` / `is_generated_fill_name()` are consulted as
+well: a name is "ours" when it is the base name carrying a different size token,
+uppercase modifiers, or both (`2.6mm Arial`, `2.1mm Arial BOLD RED`).
+`GREY_FILL_TYPE_NAME`, `BASE_TEXT_TYPE_NAME` and every name in
+`PROTECTED_TEXT_TYPE_NAMES` are excluded — the last of these because a type that
+differs from the base only in its size token is indistinguishable from a resized
+copy, which is exactly what the project's own `2.0mm Arial` became when the base
+moved to `2.1mm Arial`.
+
 ## Drafting standards — `lib/eztable/config.py`
 
 This file is the one you edit; no other module needs touching. **Restart Revit**
@@ -181,11 +192,11 @@ LINE_STYLE_NAMES = {
 GREY_FILL_TYPE_NAME = 'Fill Grey 192'   # grey shading always uses this
 GREY_TOLERANCE = 12                     # RGB spread <= 12 counts as grey
 
-BASE_TEXT_TYPE_NAME = '2.0mm Arial'     # base text type
+BASE_TEXT_TYPE_NAME = '2.1mm Arial'     # base text type
 ```
 
 **Types that already exist are never modified.** The `Fill Grey 192` and
-`2.0mm Arial` you maintain are only read and copied, never overwritten by this
+`2.1mm Arial` you maintain are only read and copied, never overwritten by this
 tool.
 
 Automatically created types follow the same naming form as your own standards:
@@ -194,16 +205,25 @@ Automatically created types follow the same naming form as your own standards:
 |---|---|
 | Grey shading | `Fill Grey 192` (the one you already have) |
 | Coloured shading | `Fill Orange EE822F`, `Fill Blue D9E1F2` |
-| Plain black text | `2.0mm Arial` (yours, used directly rather than derived) |
-| Bold | `2.0mm Arial Bold` |
-| Red | `2.0mm Arial Red E24D4E` |
+| Plain black text | `2.1mm Arial` (yours, used directly rather than derived) |
+| Bold | `2.1mm Arial Bold` |
+| Red | `2.1mm Arial Red E24D4E` |
+
+Derived types have `TEXT_BACKGROUND` forced to Transparent as they are created.
+The base type is used as-is for plain black text at the base size, so it is the
+one place where the project's own background setting reaches the drawing: an
+opaque base type masks the fill and borders under every plain cell while the
+derived ones stay transparent. `BASE_TEXT_TYPE_NAME` therefore has to name a
+type whose background is Transparent — the reason the default moved from
+`2.0mm Arial` to `2.1mm Arial`, the 2.0mm standard being opaque and not ours to
+modify.
 
 Set these to `None` for fully automatic behaviour: `EZ_*` types built from
 Excel's own fonts, sizes and colours.
 
 ### Fit to text — the table adapts to the text
 
-Font size stays fixed at 2.0mm (the most comfortable size on A3); anything that
+Font size stays fixed at 2.1mm (the most comfortable size on A3); anything that
 does not fit **expands the table** rather than shrinking the text. Three steps,
 in this order:
 
@@ -222,7 +242,7 @@ MAX_COL_GROWTH = 4.0        # how many times its original width one column may g
 CELL_PADDING_H_MM = 0.8
 ```
 
-Measured (2.0mm cap height):
+Measured (2.0mm cap height -- the base size at the time these were taken):
 
 | Sheet | Strict 1:1 | After fitting | Grown | Overflow |
 |---|---|---|---|---|

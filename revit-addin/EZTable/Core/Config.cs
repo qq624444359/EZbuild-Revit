@@ -54,7 +54,21 @@ namespace EZTable.Core
         // ---------------------------------------------------------- text
         // Derive from this existing type; bold, italic and coloured variants are
         // copies of it. Leave empty for fully automatic types.
-        public static string BaseTextTypeName = "2.0mm Arial";
+        //
+        // Plain black text at the base size uses this type as-is -- never
+        // duplicated, never modified -- so whatever background it carries is what
+        // gets drawn, while derived types are copies with their background forced
+        // to Transparent. Point this at a type whose background is Transparent;
+        // the 2.1mm one exists for exactly that reason, the 2.0mm standard being
+        // opaque.
+        public static string BaseTextTypeName = "2.1mm Arial";
+
+        // Text types Cleanup must never offer for deletion, however much they look
+        // like something this tool generated. A type whose name differs from the
+        // base only in the size token -- "2.0mm Arial" against a "2.1mm Arial"
+        // base -- is indistinguishable from a resized copy, and the 2.0mm standard
+        // is exactly that case: the project's own type. Exact names only.
+        public static string[] ProtectedTextTypeNames = { "2.0mm Arial" };
 
         // The base type above represents Excel text at this point size. Text at any
         // other size is drawn proportionally, so a sheet set in 9pt keeps the same
@@ -171,6 +185,7 @@ namespace EZTable.Core
                 case "skipwhitefill": SkipWhiteFill = Bool(value, SkipWhiteFill); return true;
 
                 case "basetexttypename": BaseTextTypeName = Blank(value); return true;
+                case "protectedtexttypenames": ProtectedTextTypeNames = NameList(value); return true;
                 case "scaletexttoexcel": ScaleTextToExcel = Bool(value, ScaleTextToExcel); return true;
                 case "basetextsizept": BaseTextSizePt = Double(value, BaseTextSizePt); return true;
 
@@ -211,7 +226,7 @@ namespace EZTable.Core
         /// <summary>
         /// Name for a scaled copy of the base text type, following the project's own
         /// convention of leading the name with the size:
-        ///     "2.0mm Arial" at 2.57mm -> "2.6mm Arial"
+        ///     "2.1mm Arial" at 2.57mm -> "2.6mm Arial"
         /// When the base name carries no size token the size is appended instead.
         /// </summary>
         public static string ResizeTextTypeName(string baseName, double capMm)
@@ -251,6 +266,20 @@ namespace EZTable.Core
             string v = value.Trim();
             return (v.Equals("none", StringComparison.OrdinalIgnoreCase) ||
                     v.Equals("null", StringComparison.OrdinalIgnoreCase)) ? null : v;
+        }
+
+        /// <summary>Comma separated list of type names; blank or "none" gives an
+        /// empty list. Names keep their spaces, so "2.0mm Arial" needs no quoting.</summary>
+        private static string[] NameList(string value)
+        {
+            if (Blank(value) == null) return new string[0];
+            var names = new List<string>();
+            foreach (string part in value.Split(','))
+            {
+                string v = part.Trim();
+                if (v.Length > 0) names.Add(v);
+            }
+            return names.ToArray();
         }
 
         private static bool Bool(string value, bool fallback)
@@ -295,6 +324,8 @@ namespace EZTable.Core
         {
             string baseName = BaseTextTypeName;
             if (string.IsNullOrEmpty(baseName) || string.IsNullOrEmpty(name) || name == baseName)
+                return false;
+            if (Array.IndexOf(ProtectedTextTypeNames ?? new string[0], name) >= 0)
                 return false;
 
             var parts = new List<string>(name.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries));
