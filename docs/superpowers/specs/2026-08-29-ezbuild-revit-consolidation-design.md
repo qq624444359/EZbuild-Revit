@@ -170,3 +170,29 @@ EZbuild ▸ Table ▸ Import Excel · Refresh · Cleanup
 * `frontend/index.html` 的 `mailto:` CTA
 * `frontend/spec-viewer.html:280` 报告页脚的 `companySub`
 * Autodesk App Store listing 的 support email
+
+### D9 — 联系邮箱定为 `pitayadesign.nz@gmail.com`（2026-09-02，取代 D8）
+
+D8 把邮箱替换整件事挂起了，理由是 `@ezbuild.co.nz` 还没建信箱。现在作者拍板：
+**不等自有域名信箱，改用另一个已经在收信的 gmail** —— `pitayadesign.nz@gmail.com`。
+
+D8 的顾虑因此消失：新地址是能收信的，替换不会把一个活的联系方式改死。
+
+三处一次性替换（随落地页一起提交，尚未执行）：
+
+* `frontend/index.html:671` 的 "Request Access" `mailto:` CTA
+* `frontend/spec-viewer.html:280` 报告页脚的 `companySub`
+* 新建的 `frontend/for-revit.html` 直接用新地址，不要再写 `pitayadesign.ezbuild@gmail.com`
+
+Autodesk App Store listing 的 support email 由作者手工改。
+
+### D10 — 落地页先在 Claude Design 出稿，再落成 HTML（2026-09-02）
+
+执行顺序第 6 步（网站落地页）不直接写 HTML。作者先在 Claude Desktop 的 Design
+里出视觉稿，再把稿子交回来落成 `frontend/for-revit.html`。
+
+配套的设计说明见 [`docs/design-briefs/for-revit-landing-page.md`](../../design-briefs/for-revit-landing-page.md)
+—— 其中的设计 token 是从 `qq624444359/ezbuild` 仓库的 `frontend/index.html`
+与 `tailwind.config.js` 实读出来的，页面文案由本仓库 README 提炼。
+
+注意落地页所在的仓库是 **`qq624444359/ezbuild`**（网站），不是本仓库。
