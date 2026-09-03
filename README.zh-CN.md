@@ -88,10 +88,10 @@ EZTable 走第四条路：**把 Excel 直接画成 Revit 原生图元**（详图
 **第一步 · 拿到代码**
 
 ```
-git clone https://github.com/qq624444359/EZTable.git
+git clone https://github.com/qq624444359/EZbuild-Revit.git
 ```
 
-不用 git 的话，`Code` → `Download ZIP`，解压到一个固定位置（比如 `D:\EZTable`）。
+不用 git 的话，`Code` → `Download ZIP`，解压到一个固定位置（比如 `D:\EZbuild-Revit`）。
 
 **第二步 · 把 `pyrevit` 子目录注册给 pyRevit**
 
@@ -99,7 +99,7 @@ git clone https://github.com/qq624444359/EZTable.git
 `EZbuild.extension` 本身：
 
 ```
-D:\EZTable\
+D:\EZbuild-Revit\
 ├── pyrevit\                     ← 注册这一层
 │   └── EZbuild.extension\
 ├── revit-addin\
@@ -109,12 +109,12 @@ D:\EZTable\
 命令行：
 
 ```
-pyrevit extend D:\EZTable\pyrevit
+pyrevit extend D:\EZbuild-Revit\pyrevit
 pyrevit reload
 ```
 
 或者界面操作：pyRevit → Settings → Custom Extension Directories → Add Folder →
-选 `D:\EZTable\pyrevit` → Save Settings and Reload。
+选 `D:\EZbuild-Revit\pyrevit` → Save Settings and Reload。
 
 **第三步 · 重开 Revit**，功能区上会多出一个 **EZbuild** 选项卡。
 
@@ -127,8 +127,8 @@ pyrevit reload
 **需要**：Visual Studio 2022 + .NET SDK，本机装有对应版本的 Revit。
 
 ```
-git clone https://github.com/qq624444359/EZTable.git
-cd EZTable/revit-addin/EZTable
+git clone https://github.com/qq624444359/EZbuild-Revit.git
+cd EZbuild-Revit/revit-addin/EZTable
 dotnet build -c Release
 ```
 

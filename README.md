@@ -95,11 +95,11 @@ No Python install, no pip, no third-party libraries.
 **Step 1 — get the code**
 
 ```
-git clone https://github.com/qq624444359/EZTable.git
+git clone https://github.com/qq624444359/EZbuild-Revit.git
 ```
 
 Or without git: `Code` → `Download ZIP`, and unpack somewhere permanent such as
-`D:\EZTable`.
+`D:\EZbuild-Revit`.
 
 **Step 2 — register the `pyrevit` subdirectory with pyRevit**
 
@@ -107,7 +107,7 @@ Register the **`pyrevit` folder inside the repository** — not the repository
 root, and not `EZbuild.extension` itself:
 
 ```
-D:\EZTable\
+D:\EZbuild-Revit\
 ├── pyrevit\                     <- register this level
 │   └── EZbuild.extension\
 ├── revit-addin\
@@ -117,12 +117,12 @@ D:\EZTable\
 From the command line:
 
 ```
-pyrevit extend D:\EZTable\pyrevit
+pyrevit extend D:\EZbuild-Revit\pyrevit
 pyrevit reload
 ```
 
 Or through the UI: pyRevit → Settings → Custom Extension Directories → Add
-Folder → pick `D:\EZTable\pyrevit` → Save Settings and Reload.
+Folder → pick `D:\EZbuild-Revit\pyrevit` → Save Settings and Reload.
 
 **Step 3 — restart Revit.** An **EZbuild** tab appears on the ribbon.
 
@@ -136,8 +136,8 @@ For now this **has to be built yourself**; there is no packaged installer yet.
 installed locally.
 
 ```
-git clone https://github.com/qq624444359/EZTable.git
-cd EZTable/revit-addin/EZTable
+git clone https://github.com/qq624444359/EZbuild-Revit.git
+cd EZbuild-Revit/revit-addin/EZTable
 dotnet build -c Release
 ```
 

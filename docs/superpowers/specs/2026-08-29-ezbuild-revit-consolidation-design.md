@@ -235,3 +235,31 @@ D9 的替换清单少列了一处：`frontend/privacy.html:54` 也有旧邮箱�
    要改写成自行构建的流程。
 
 顺带发现：`README.md:139` 的克隆地址仍是 `qq624444359/EZTable.git`，合并后已过时。
+
+### D12 — App Store 审核期间落地页改指 GitHub（2026-09-03）
+
+D11 留的两个问题有答案了：**Autodesk App Store 的 listing 还在审核**，尚未真正上线。
+因此没有「真实 listing URL」可填，README 的说法（无打包安装程序，需自行构建）是
+对的，落地页照设计稿写的那套「从 App Store 下载安装包并运行」是错的。
+
+落地页已改（网站仓库 `687f555`）：
+
+* hero 与底部 CTA 的主按钮从 "Get it on the Autodesk App Store" 改为
+  **"Get it on GitHub →"**，副按钮改为跳转到 `#install` 而不是重复同一个链接
+* 按钮下方加一句说明：listing 审核中，暂时从 GitHub 安装
+* standalone 安装卡三步改写为仓库实际记录的构建流程（`dotnet build -c Release`、
+  构建后自动拷贝进 Revit Addins 目录、单版本 Revit 用 `-p:TargetFrameworks=` 只构建
+  一个目标）。被替换掉的那条「Windows 拦截了下载的安装包 → 右键解除锁定」对自行
+  编译出来的 DLL 根本不适用
+
+**listing 通过审核后要做的**：把两个主按钮的 href 换回 App Store 实际地址，删掉
+hero 那句 "listing is in review"，并回头确认 standalone 卡片是否该改回安装包流程。
+
+同时修正了两份 README 里合并后过时的引用（4 处克隆地址 + 示例路径）：
+
+* `git clone …/EZTable.git` → `…/EZbuild-Revit.git`
+* `cd EZTable/revit-addin/EZTable` → `cd EZbuild-Revit/…`
+* 示例解压路径 `D:\EZTable` → `D:\EZbuild-Revit`
+
+保留未改的 `EZTable` 是**功能名与程序集名**（`revit-addin/EZTable/`、
+`EZTable.csproj`、`EZTable.config`），按 D3 不动。
