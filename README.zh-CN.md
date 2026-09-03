@@ -124,7 +124,9 @@ pyrevit reload
 
 目前**需要自己编译**（还没有提供打包好的安装程序）。
 
-**需要**：Visual Studio 2022 + .NET SDK，本机装有对应版本的 Revit。
+**需要**：Visual Studio 2022 + .NET SDK，本机装有对应版本的 Revit。两个受支持的
+Revit 跑在不同运行时上，所以装哪个 SDK 取决于你要编哪个版本——Revit 2026 用
+.NET 8，Revit 2027 用 .NET 10。
 
 ```
 git clone https://github.com/qq624444359/EZbuild-Revit.git
@@ -132,25 +134,35 @@ cd EZbuild-Revit/revit-addin/EZTable
 dotnet build -c Release
 ```
 
-工程编译目标是 **`net8.0-windows`**，一个目标即覆盖两个支持的 Revit 版本——
-2026 与 2027 都跑在 .NET 8 上。
+工程是**双目标**编译的，一个受支持的 Revit 对应一个目标——因为两者不共用运行时：
 
-Revit API 的路径默认取 `C:\Program Files\Autodesk\Revit 2026`。要编 2027、
-或者 Revit 装在别处，**不用改工程文件**，命令行覆盖就行：
+| 目标框架 | 对应 Revit | 运行时 |
+|---|---|---|
+| `net8.0-windows` | 2026 | .NET 8 |
+| `net10.0-windows` | 2027 | .NET 10 |
+
+两个一起编需要两套 SDK、两个 Revit 都装。只装了其中一个的话，指定那个目标即可
+——注意每个目标各自去找自己那版 Revit，分别是
+`C:\Program Files\Autodesk\Revit 2026` 和 `…\Revit 2027`。
+**不用改工程文件**：
 
 ```
-# 编译针对 Revit 2027 的版本
-dotnet build -c Release -p:RevitVersion=2027
+# 只装了 Revit 2026
+dotnet build -c Release -p:TargetFrameworks=net8.0-windows
+
+# 只装了 Revit 2027
+dotnet build -c Release -p:TargetFrameworks=net10.0-windows
 
 # Revit 装在别的盘
-dotnet build -c Release -p:RevitApiDir="D:\Autodesk\Revit 2027"
+dotnet build -c Release -p:TargetFrameworks=net10.0-windows -p:RevitApiDir="D:\Autodesk\Revit 2027"
 ```
 
 找不到 `RevitAPI.dll` 时会直接报一句人话告诉你该传什么参数，
 而不是甩一屏「找不到类型 Document」。
 
-编译成功后，`net8.0-windows` 目标会**自动**把 `.addin` 和所有 `.dll` 复制到
-`%AppData%\Autodesk\Revit\Addins\<RevitVersion>\`。重开 Revit 即可看到 **EZbuild** 选项卡。
+编译成功后会**自动**把 `.addin` 和所有 `.dll` 复制到该目标所属 Revit 的 Addins
+目录——net8.0 目标进 `…\Addins\2026\`，net10.0 目标进 `…\Addins\2027\`。
+重开 Revit 即可看到 **EZbuild** 选项卡。
 
 手工安装的话，把下面这些一起丢进 `%AppData%\Autodesk\Revit\Addins\<版本号>\`：
 
@@ -395,7 +407,7 @@ EZbuild-Revit/
 │       └── lib/eztable/             全部逻辑，14 个模块
 ├── revit-addin/
 │   └── EZTable/                 C# 原生插件 —— Table 功能的程序集
-│       ├── EZTable.csproj           net8.0-windows（Revit 2026 / 2027）
+│       ├── EZTable.csproj           双目标：net8.0（2026）/ net10.0（2027）
 │       ├── EZTable.addin            Revit 清单（VendorId com.ezbuild）
 │       ├── Core/ Models/ Utils/     解析与排版，不碰 Revit API
 │       └── Revit/ Commands/ UI/     Revit API 与界面

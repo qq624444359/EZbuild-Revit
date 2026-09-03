@@ -133,7 +133,9 @@ Folder → pick `D:\EZbuild-Revit\pyrevit` → Save Settings and Reload.
 For now this **has to be built yourself**; there is no packaged installer yet.
 
 **Requires**: Visual Studio 2022 or the .NET SDK, plus the matching Revit
-installed locally.
+installed locally. The two supported Revits are on different runtimes, so the
+SDK you need depends on which you are building for — .NET 8 for Revit 2026,
+.NET 10 for Revit 2027.
 
 ```
 git clone https://github.com/qq624444359/EZbuild-Revit.git
@@ -141,27 +143,37 @@ cd EZbuild-Revit/revit-addin/EZTable
 dotnet build -c Release
 ```
 
-The project targets **`net8.0-windows`**, which covers both supported Revit
-versions — 2026 and 2027 each run on .NET 8.
+The project is **dual-targeted**, one target per supported Revit, because the
+two do not share a runtime:
 
-The Revit API path defaults to `C:\Program Files\Autodesk\Revit 2026`. If you
-are building against 2027, or Revit lives elsewhere, **there is no need to edit
-the project file** — override on the command line:
+| Target framework | Revit | Runtime |
+|---|---|---|
+| `net8.0-windows` | 2026 | .NET 8 |
+| `net10.0-windows` | 2027 | .NET 10 |
+
+Building both at once needs both SDKs and both Revits installed. With only one
+of them present, name that target — and note that each target looks for its own
+Revit, so `C:\Program Files\Autodesk\Revit 2026` and `…\Revit 2027`
+respectively. **There is no need to edit the project file**:
 
 ```
-# build against Revit 2027
-dotnet build -c Release -p:RevitVersion=2027
+# only Revit 2026 installed
+dotnet build -c Release -p:TargetFrameworks=net8.0-windows
+
+# only Revit 2027 installed
+dotnet build -c Release -p:TargetFrameworks=net10.0-windows
 
 # Revit installed on another drive
-dotnet build -c Release -p:RevitApiDir="D:\Autodesk\Revit 2027"
+dotnet build -c Release -p:TargetFrameworks=net10.0-windows -p:RevitApiDir="D:\Autodesk\Revit 2027"
 ```
 
 When `RevitAPI.dll` cannot be found, the build says so in plain language and
 names the argument to pass, rather than emitting a screen of "the type Document
 could not be found".
 
-A successful `net8.0-windows` build **automatically** copies the `.addin` and
-every `.dll` into `%AppData%\Autodesk\Revit\Addins\<RevitVersion>\`. Restart Revit and an
+A successful build **automatically** copies the `.addin` and every `.dll` into
+the Addins folder of the Revit that target belongs to — `…\Addins\2026\` for
+the net8.0 target, `…\Addins\2027\` for net10.0. Restart Revit and an
 **EZbuild** tab appears.
 
 To install by hand, drop all of these into
@@ -439,7 +451,7 @@ EZbuild-Revit/
 │       └── lib/eztable/             all the logic, 14 modules
 ├── revit-addin/
 │   └── EZTable/                 C# native add-in — the Table feature's assembly
-│       ├── EZTable.csproj           net8.0-windows (Revit 2026 / 2027)
+│       ├── EZTable.csproj           dual target: net8.0 (2026) / net10.0 (2027)
 │       ├── EZTable.addin            Revit manifest (VendorId com.ezbuild)
 │       ├── Core/ Models/ Utils/     parsing and layout, no Revit API
 │       └── Revit/ Commands/ UI/     Revit API and interface

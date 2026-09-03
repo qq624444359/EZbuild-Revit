@@ -11,23 +11,28 @@
     <LangVersion>12</LangVersion>
 
     <!--
-      Revit 2026 and 2027 both run on .NET 8, so one target covers the supported
-      range. The net48 target that used to sit alongside this one existed only
-      for Revit 2022-2024, which is no longer supported.
+      One target per supported Revit, because they do not share a runtime:
+      Revit 2026 is .NET 8, Revit 2027 is .NET 10. Building both needs both
+      SDKs and both Revits installed, so with only one of them present name
+      that target on the command line rather than editing this file:
+          dotnet build -c Release -p:TargetFrameworks=net8.0-windows
     -->
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFrameworks Condition="'$(TargetFrameworks)' == ''">net8.0-windows;net10.0-windows</TargetFrameworks>
   </PropertyGroup>
 
   <!--
     Where the Revit API lives. The default is the standard install path; for an
     install elsewhere, or a different version, override on the command line
     rather than editing this file:
-        dotnet build -p:RevitVersion=2027
         dotnet build -p:RevitApiDir="D:\Autodesk\Revit 2027"
+    RevitVersion is derived from the target framework and rarely needs setting
+    by hand; RevitApiDir overrides it outright.
   -->
   <PropertyGroup>
-    <RevitVersion Condition="'$(RevitVersion)' == ''">2026</RevitVersion>
-    <RevitApiDir Condition="'$(RevitApiDir)' == ''">C:\Program Files\Autodesk\Revit $(RevitVersion)</RevitApiDir>
+    <RevitVersion Condition="'$(RevitVersion)' == '' And '$(TargetFramework)' == 'net8.0-windows'">2026</RevitVersion>
+    <RevitVersion Condition="'$(RevitVersion)' == '' And '$(TargetFramework)' == 'net10.0-windows'">2027</RevitVersion>
+
+    <RevitApiDir Condition="'$(RevitApiDir)' == '' And '$(TargetFramework)' != ''">C:\Program Files\Autodesk\Revit $(RevitVersion)</RevitApiDir>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' != ''">
@@ -45,7 +50,7 @@
        of "the type Document could not be found" -->
   <Target Name="CheckRevitApi" BeforeTargets="ResolveAssemblyReferences" Condition="'$(TargetFramework)' != ''">
     <Error Condition="!Exists('$(RevitApiDir)\RevitAPI.dll')"
-           Text="RevitAPI.dll not found at &quot;$(RevitApiDir)&quot;. Point the build at your Revit install with -p:RevitApiDir=&quot;C:\Path\To\Revit&quot; or -p:RevitVersion=2027." />
+           Text="RevitAPI.dll not found at &quot;$(RevitApiDir)&quot; for target $(TargetFramework). Point the build at your Revit install with -p:RevitApiDir=&quot;C:\Path\To\Revit&quot;, or build only the target you have with -p:TargetFrameworks=net8.0-windows (Revit 2026) or -p:TargetFrameworks=net10.0-windows (Revit 2027)." />
   </Target>
 
   <ItemGroup>
@@ -65,7 +70,7 @@
   </ItemGroup>
 
   <!-- After a successful build, copy everything into the Revit addins folder -->
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(TargetFramework)' == 'net8.0-windows'">
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(TargetFramework)' != ''">
     <PropertyGroup>
       <AddinDir>$(AppData)\Autodesk\Revit\Addins\$(RevitVersion)</AddinDir>
       <TargetAddinDir>$(AddinDir)\EZTable</TargetAddinDir>
