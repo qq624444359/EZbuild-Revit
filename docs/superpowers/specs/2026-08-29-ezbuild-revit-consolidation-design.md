@@ -291,3 +291,36 @@ The web platform … is in private beta」，读起来像同一产品的免费�
 里面 `whitespace-nowrap` 的代码块把卡片撑宽，外层 `overflow-x-auto` 因而失效，
 约 500px 以下整页横向溢出。给卡片、列表行与代码块加 `min-w-0` 后，两页在
 1280 / 768 / 390 / 320 四个宽度下均无溢出。
+
+### D14 — 支持的 Revit 版本更正为 2026–2027（2026-09-03，推翻 D11 第一、二行）
+
+作者指出实际支持范围是 **2026 – 2027，两个 build 都是**。这推翻了 D11 表格里
+前两行的「更正」——当时我依据 `EZTable.csproj` 的双目标和 README 的「2021+ /
+2022–2026」，把设计稿的 2026–2027 改成了 2022–2026。**依据本身就是过时的**：
+仓库的构建配置与 README 落后于实际发布状态，设计稿反而更接近事实。
+
+教训：D11 那张表说的是「设计稿与源码不符」，但没验证**源码本身是否为真**。
+下次遇到版本、兼容性这类只有作者知道的事实，先问，别把仓库当唯一真相。
+
+已改（网站 `64b0c4c`，本仓库见下一 commit）：
+
+| 位置 | 原 | 现 |
+|---|---|---|
+| `for-revit.html` meta description | `Revit 2021–2027` | `Revit 2026–2027` |
+| `for-revit.html` hero 版本行 | `2021 – 2026` | `2026 – 2027` |
+| `for-revit.html` 对比表两列 | `2021 – 2026` / `2022 – 2026` | 均为 `2026 – 2027` |
+| `for-revit.html` standalone 提示 | 双目标二选一 | 改为 `-p:RevitVersion=2027` |
+| `README.md` / `README.zh-CN.md` 版本表 | `2021+` / `2022–2026` | 均为 `2026 – 2027` |
+| 两份 README 的目标框架表 | net48 + net8.0 双目标 | 单目标 `net8.0-windows` |
+| `EZTable.csproj` | `TargetFrameworks=net48;net8.0-windows` | `TargetFramework=net8.0-windows` |
+
+`net48` 目标只为 Revit 2022–2024 而存在，该区间已不再支持，因此连同
+`RevitVersionNet48` 属性与 net48 分支的 `RevitApiDir` 条件一并删除。构建默认仍是
+`RevitVersion=2026`，编 2027 传 `-p:RevitVersion=2027`。
+
+pyRevit 侧无需改代码：两个 `bundle.yaml` 只有 `title`，未声明
+`min_revit_version` / `max_revit_version`，版本范围仅是文档陈述。
+
+**一处未经验证的假设**：我按 Revit 2026 与 2027 同为 .NET 8 处理，保留单一
+`net8.0-windows` 目标。若 2027 实际换用更新的 .NET 运行时，目标框架需随之上调，
+两份 README 中「2026 与 2027 都跑在 .NET 8 上」那句也要改。此处未做实机验证。

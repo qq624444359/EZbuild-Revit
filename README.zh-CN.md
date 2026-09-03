@@ -39,7 +39,7 @@ EZTable 走第四条路：**把 Excel 直接画成 Revit 原生图元**（详图
 | 目录 | [`pyrevit/`](pyrevit/) | [`revit-addin/`](revit-addin/) |
 | 语言 | Python（IronPython 2.7） | C# / .NET |
 | 前提 | **要先装 pyRevit** | 不用，装完就能用 |
-| Revit 版本 | 2021+（实测 2026） | 2022–2026（双目标编译） |
+| Revit 版本 | 2026 – 2027 | 2026 – 2027 |
 | 功能 | Import + Refresh + **Cleanup** | Import + Refresh |
 | 第三方依赖 | 无 | ClosedXML |
 | 改配置 | 改 `config.py`，重启 Revit | 改 `EZTable.config`，重开 Revit |
@@ -132,32 +132,25 @@ cd EZbuild-Revit/revit-addin/EZTable
 dotnet build -c Release
 ```
 
-工程是**双目标**编译的：
+工程编译目标是 **`net8.0-windows`**，一个目标即覆盖两个支持的 Revit 版本——
+2026 与 2027 都跑在 .NET 8 上。
 
-| 目标框架 | 对应 Revit |
-|---|---|
-| `net8.0-windows` | 2025 / 2026 |
-| `net48` | 2022 – 2024 |
-
-Revit API 的路径默认取标准安装位置。装在别处、或者只装了一个版本，
-**不用改工程文件**，命令行覆盖就行：
+Revit API 的路径默认取 `C:\Program Files\Autodesk\Revit 2026`。要编 2027、
+或者 Revit 装在别处，**不用改工程文件**，命令行覆盖就行：
 
 ```
-# 只编 Revit 2025/2026 那个目标
-dotnet build -c Release -p:TargetFrameworks=net8.0-windows
+# 编译针对 Revit 2027 的版本
+dotnet build -c Release -p:RevitVersion=2027
 
 # Revit 装在别的盘
-dotnet build -c Release -p:RevitApiDir="D:\Autodesk\Revit 2026"
-
-# 换一个 Revit 版本
-dotnet build -c Release -p:RevitVersion=2025
+dotnet build -c Release -p:RevitApiDir="D:\Autodesk\Revit 2027"
 ```
 
 找不到 `RevitAPI.dll` 时会直接报一句人话告诉你该传什么参数，
 而不是甩一屏「找不到类型 Document」。
 
 编译成功后，`net8.0-windows` 目标会**自动**把 `.addin` 和所有 `.dll` 复制到
-`%AppData%\Autodesk\Revit\Addins\2026\`。重开 Revit 即可看到 **EZbuild** 选项卡。
+`%AppData%\Autodesk\Revit\Addins\<RevitVersion>\`。重开 Revit 即可看到 **EZbuild** 选项卡。
 
 手工安装的话，把下面这些一起丢进 `%AppData%\Autodesk\Revit\Addins\<版本号>\`：
 
@@ -402,7 +395,7 @@ EZbuild-Revit/
 │       └── lib/eztable/             全部逻辑，14 个模块
 ├── revit-addin/
 │   └── EZTable/                 C# 原生插件 —— Table 功能的程序集
-│       ├── EZTable.csproj           双目标：net48 / net8.0-windows
+│       ├── EZTable.csproj           net8.0-windows（Revit 2026 / 2027）
 │       ├── EZTable.addin            Revit 清单（VendorId com.ezbuild）
 │       ├── Core/ Models/ Utils/     解析与排版，不碰 Revit API
 │       └── Revit/ Commands/ UI/     Revit API 与界面
