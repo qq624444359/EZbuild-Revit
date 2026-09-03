@@ -263,3 +263,31 @@ hero 那句 "listing is in review"，并回头确认 standalone 卡片是否该�
 
 保留未改的 `EZTable` 是**功能名与程序集名**（`revit-addin/EZTable/`、
 `EZTable.csproj`、`EZTable.config`），按 D3 不动。
+
+### D13 — 落地页明确标注两者是独立产品（2026-09-03）
+
+作者指出：EZbuild for Revit 与 EZbuild（审图平台）是**完全不同的服务**，插件不是
+平台的延展。落地页原文案有反向暗示——底部 CTA 写的是「EZbuild for Revit is free.
+The web platform … is in private beta」，读起来像同一产品的免费档与付费档。
+
+网站仓库 `d169009` 已改：
+
+* hero 与 how-it-works 之间新增一段「Two separate products」，左右两张卡并列：
+  左边这个插件（免费、离线、无账号），右边平台（需账号、私测、要上传图纸）
+* hero 副文案下加一行「It runs entirely inside Revit on your own machine —
+  no account, no upload」
+* 底部 CTA 那句改写为「a different product」
+* `index.html` 的横幅补上「A separate free product, not part of this platform …
+  No EZbuild account needed」
+* `<meta name="description">` 加上 standalone / separate
+
+**「不联网、无账号」这几句是核对过源码才写的**，不是营销话术：`revit-addin/` 与
+`pyrevit/` 中均无 `HttpClient` / `WebRequest` / `urllib` / socket，无认证、无 token、
+无遥测；两处 `http` 字样是 OOXML 的命名空间标识符（`schemas.openxmlformats.org`），
+只作字符串比对，从不发起请求。**将来若给插件加上 Live Audit 之类的联网功能，这一
+段必须同步改写**，否则页面会变成不实陈述。
+
+顺带修掉一个设计稿自带的移动端缺陷：安装卡是 grid item，默认 `min-width:auto`，
+里面 `whitespace-nowrap` 的代码块把卡片撑宽，外层 `overflow-x-auto` 因而失效，
+约 500px 以下整页横向溢出。给卡片、列表行与代码块加 `min-w-0` 后，两页在
+1280 / 768 / 390 / 320 四个宽度下均无溢出。
