@@ -196,3 +196,42 @@ Autodesk App Store listing 的 support email 由作者手工改。
 与 `tailwind.config.js` 实读出来的，页面文案由本仓库 README 提炼。
 
 注意落地页所在的仓库是 **`qq624444359/ezbuild`**（网站），不是本仓库。
+
+### D11 — 落地页已落地，四处事实性修正（2026-09-03）
+
+执行顺序第 6 步完成。设计稿经 Claude Design 出稿、handoff bundle 导出后，落成
+`frontend/for-revit.html`（388 行），并按计划改了 `index.html` 三处（导航、footer
+的 Platform 栏、`#how-it-works` 之后的窄横幅）。提交在网站仓库
+`qq624444359/ezbuild` 的 `claude/ezbuild-revit-new-website-5yhkzg` 分支。
+
+设计稿里有四处说法与插件源码不符，落地时已改正——**记在这里是因为设计稿本身
+仍是错的**，将来若从 Design 项目重新导出，同样的四处会再回来：
+
+| 设计稿写的 | 实际 | 依据 |
+|---|---|---|
+| standalone 支持 Revit `2026 – 2027` | `2022 – 2026` | `EZTable.csproj` 双目标 net48（2022–2024）+ net8.0-windows（2025/2026） |
+| hero 版本行 `2021 – 2027` | `2021 – 2026` | 仓库中无任何 2027 支持 |
+| standalone「面板在 Add-Ins 选项卡下」 | 自建 `EZbuild` 选项卡 + `Table` 面板 | `App.cs:13`、`App.cs:24` |
+| GitHub 链接指向 `qq624444359/EZTable` | `qq624444359/EZbuild-Revit` | 合并后 EZTable 仓库已归档 |
+
+明暗主题的疑虑不成立：设计稿自己引了 `css/unified-theme.css` 作为覆盖层，并补了
+一组 `html[data-theme="light"]` 的修正（hero 光晕、蓝图网格、CTA 圆环在浅色底下
+会消失，白色 hero 按钮在近白页面上没有边缘），另加载 `js/theme-toggle.js`。
+无头验证：`for-revit.html` 与 `index.html` 的本地资源全部 200，主题开关
+（`#ezbuild-theme-toggle`）在两页上都正常挂载，无横向溢出，控制台报错与首页完全
+一致（均为沙箱拦截 CDN 所致）。
+
+D9 的替换清单少列了一处：`frontend/privacy.html:54` 也有旧邮箱。三处已一并替换。
+
+#### 两个悬而未决的问题（需作者确认）
+
+1. **Autodesk App Store 链接仍是占位符。** 页面上两个 "Get it on the Autodesk App
+   Store" 按钮指向 `https://apps.autodesk.com/` 首页，而非实际 listing。上线前必须
+   替换成真实 URL。
+2. **standalone 的安装路径自相矛盾。** 落地页照设计稿写的是「从 App Store 下载对应
+   Revit 版本的安装包并运行」，但本仓库 `README.md:133` 写的是「For now this **has
+   to be built yourself**; there is no packaged installer yet」。而本设计文档开头又
+   称 EZTable 已上架 App Store。三者需对齐：要么 README 过时，要么落地页那张卡片
+   要改写成自行构建的流程。
+
+顺带发现：`README.md:139` 的克隆地址仍是 `qq624444359/EZTable.git`，合并后已过时。
