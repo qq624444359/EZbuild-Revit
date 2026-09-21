@@ -118,6 +118,31 @@ BLOCK_GAP_MM = 10.0            # vertical gap between blocks
 REPEAT_LEADING_COLS = 1        # repeat the first N columns (row headers) at the
                                # start of each block; 0 = do not repeat
 
+# ---------------------------------------------------------------- paging a tall table
+#
+# Splitting by column fixes the width but makes the table taller: the blocks are
+# stacked, so a table that was too wide for A3 can end up too tall for it. The
+# same happens to a plain long schedule that was never split at all.
+#
+# Once the stack passes MAX_TABLE_HEIGHT_MM the table is cut into **parts, one
+# drafting view each** -- 'Table (1/2)', 'Table (2/2)' -- to be placed on a sheet
+# apiece. Nothing is scaled: every part stays 1:1.
+#
+# A single block taller than the limit on its own is cut by row, with the leading
+# rows repeated as a header on each part.
+#
+# Set to 0 or None to keep everything in one view, however tall.
+MAX_TABLE_HEIGHT_MM = 270.0    # usable height of a landscape A3 minus the margins
+REPEAT_LEADING_ROWS = 1        # repeat the first N rows (column headers) at the top
+                               # of each row part; 0 = do not repeat
+
+# How the parts are named. {name} is the view name built from VIEW_NAME_TEMPLATE,
+# {part} the 1-based part number and {parts} the total:
+#   'Table (1/2)'   '{name} ({part}/{parts})'
+#   'Table - Part 1' '{name} - Part {part}'
+# A table that fits in one view keeps the plain name, with no suffix.
+PART_NAME_TEMPLATE = '{name} ({part}/{parts})'
+
 # ---------------------------------------------------------------- the report window
 #
 # 'auto'   open the output window only when there are warnings or text that
@@ -361,3 +386,16 @@ def view_name(sheet_name, file_path=None):
         return VIEW_NAME_TEMPLATE.format(sheet=sheet_name or '', file=base)
     except Exception:
         return VIEW_NAME_TEMPLATE
+
+
+def part_view_name(name, part, parts):
+    """
+    Name of one part of a table split across several views. A single-part table
+    keeps its plain name -- no '(1/1)' on a table that was never split.
+    """
+    if parts is None or parts <= 1:
+        return name
+    try:
+        return PART_NAME_TEMPLATE.format(name=name, part=part, parts=parts)
+    except Exception:
+        return '%s (%d/%d)' % (name, part, parts)

@@ -81,6 +81,21 @@ def _assign_unique_name(view, name):
     raise RuntimeError('Could not name the view - %r and its suffixes are all taken' % name)
 
 
+def rename_view(view, name):
+    """
+    Rename an existing view, used when a refresh changes how many parts a table
+    needs and the '(1/2)' suffixes no longer match. A name that is already
+    right costs nothing, and one that cannot be taken is left alone: a stale
+    suffix is a far smaller problem than a failed refresh.
+    """
+    try:
+        if view.Name == name:
+            return view.Name
+        return _assign_unique_name(view, name)
+    except Exception:
+        return view.Name
+
+
 # ---------------------------------------------------------------- drawing
 
 class Renderer(object):

@@ -54,13 +54,16 @@ namespace EZTable.Commands
                         return Result.Failed;
                     }
 
-                    Autodesk.Revit.DB.View view;
+                    // A table too tall for one sheet lands in several views,
+                    // one part each. One transaction covers the lot, so a
+                    // failure halfway leaves no half-drawn table behind.
+                    List<Autodesk.Revit.DB.View> views;
                     using (var t = new Transaction(doc, "EZTable: Import Excel Table"))
                     {
                         t.Start();
                         try
                         {
-                            view = job.DrawNewView(doc);
+                            views = job.DrawNewViews(doc);
                             t.Commit();
                         }
                         catch (Exception ex)
@@ -72,11 +75,11 @@ namespace EZTable.Commands
                         }
                     }
 
-                    // Switch to the new view once drawn. Must happen after the
+                    // Switch to the first view once drawn. Must happen after the
                     // transaction commits.
-                    try { uidoc.ActiveView = view; } catch (Exception) { }
+                    try { uidoc.ActiveView = views[0]; } catch (Exception) { }
 
-                    ReportIfNeeded(job);
+                    ReportIfNeeded(job, views);
                     return Result.Succeeded;
                 }
             }
@@ -113,23 +116,36 @@ namespace EZTable.Commands
         /// <summary>
         /// Only open a window when there is something worth saying. A successful
         /// import already announces itself by switching to the new view, so
-        /// normally a second dialog is just noise.
+        /// normally a second dialog is just noise -- but a table split across
+        /// several sheets always says so, because the other parts are sitting in
+        /// views the user has not been switched to.
         /// </summary>
-        private static void ReportIfNeeded(TableJob job)
+        private static void ReportIfNeeded(TableJob job, List<Autodesk.Revit.DB.View> views)
         {
             var lines = new List<string>();
-            lines.AddRange(Config.LoadWarnings);
+            if (views.Count > 1)
+            {
+                lines.Add(string.Format(
+                    "The table is taller than one sheet, so it was split into {0} "
+                    + "parts - place each of these views on its own sheet:",
+                    views.Count));
+                lines.AddRange(views.Select(v => "  " + v.Name));
+                lines.Add("");
+            }
+            lines.AddRange(Config.LoadWarnings.Select(w => "- " + w));
             if (job.Data?.Warnings != null)
-                lines.AddRange(job.Data.Warnings);
+                lines.AddRange(job.Data.Warnings.Select(w => "- " + w));
 
             if (lines.Count == 0) return;
 
             const int MAX_SHOWN = 20;
-            string body = string.Join("\n", lines.Take(MAX_SHOWN).Select(w => "- " + w));
+            string body = string.Join("\n", lines.Take(MAX_SHOWN));
             if (lines.Count > MAX_SHOWN)
                 body += string.Format("\n... and {0} more", lines.Count - MAX_SHOWN);
 
-            TaskDialog.Show("EZTable - imported with warnings", body);
+            string title = views.Count > 1 ? "EZTable - imported in parts"
+                                           : "EZTable - imported with warnings";
+            TaskDialog.Show(title, body);
         }
     }
 }

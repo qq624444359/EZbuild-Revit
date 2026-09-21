@@ -39,15 +39,29 @@ TextItem = namedtuple(
 
 
 class Plan(object):
-    __slots__ = ('fills', 'lines', 'texts', 'grid', 'warnings', 'blocks')
+    """
+    One drafting view's worth of drawing instructions.
 
-    def __init__(self, grid, warnings=None):
+    A table too tall for one sheet is cut into several parts, one Plan each;
+    `part` / `part_count` say which this is. The whole table produces a single
+    Plan with part 1 of 1.
+    """
+
+    __slots__ = ('fills', 'lines', 'texts', 'grid', 'warnings', 'blocks',
+                 'part', 'part_count', 'width_ft', 'height_ft')
+
+    def __init__(self, grid, warnings=None, part=1, part_count=1):
         self.grid = grid
         self.fills = []
         self.lines = []
         self.texts = []
         self.warnings = warnings if warnings is not None else []
-        self.blocks = []        # [(block number, [Excel column numbers...], width ft, height ft)]
+        self.blocks = []        # [(block number, [Excel columns], [Excel rows],
+                                #   width ft, height ft)]
+        self.part = part
+        self.part_count = part_count
+        self.width_ft = 0.0     # what this part occupies on paper
+        self.height_ft = 0.0
 
     @property
     def element_count(self):
@@ -72,17 +86,21 @@ class Plan(object):
 
 # ---------------------------------------------------------------- entry point
 
-def build_plan(sheet, merge_borders=True, merge_fills=True,
-               skip_white_fill=True, cap_height_ft=None):
+def build_plans(sheet, merge_borders=True, merge_fills=True,
+                skip_white_fill=True, cap_height_ft=None):
     """
-    sheet: xlreader.SheetData -> Plan
+    sheet: xlreader.SheetData -> [Plan], one per part
+
+    A table that fits on one sheet returns a single Plan. An over-wide one is
+    split by column and the blocks stacked downwards; once that stack passes
+    MAX_TABLE_HEIGHT_MM it is cut into parts, each of which becomes its own
+    drafting view to be placed on its own sheet. Nothing is ever scaled.
 
     cap_height_ft: when a project text type is reused, pass its TEXT_SIZE in
     feet; vertical centring is then computed against the real size rather than
     the one written in Excel.
     """
     grid = sheet.grid
-    plan = Plan(grid, sheet.warnings)
 
     placed = []            # (cell, vr0, vc0, vr1, vc1)
     for cell in sheet.cells:
@@ -93,43 +111,106 @@ def build_plan(sheet, merge_borders=True, merge_fills=True,
 
     # Fit the table to its text first (grow columns, wrap, grow rows), then
     # draw. The order cannot be reversed: border and fill coordinates both
-    # depend on the final row and column dimensions.
+    # depend on the final row and column dimensions, and so does every split
+    # decision below.
     wrapped = fit_to_text(grid, placed, cap_height_ft)
 
+    warnings = sheet.warnings if sheet.warnings is not None else []
+
     # Split an over-wide table into column blocks stacked downwards -- the only
-    # way to fit A3 without wrecking the layout
-    chunks = split_columns(grid, placed, plan.warnings)
+    # way to fit A3 without wrecking the layout -- and an over-tall block by
+    # row, so that no single block is taller than one sheet on its own.
+    col_chunks = split_columns(grid, placed, warnings)
+    row_chunks = split_rows(grid, placed, warnings)
+
+    # Reading order: a column block in full (all its row bands) before the next
+    # column block starts.
+    pieces = [(vr_list, vc_list)
+              for vc_list in col_chunks for vr_list in row_chunks]
+
     gap = mm_to_feet(cfg.BLOCK_GAP_MM)
-    y_off = 0.0
+    pages = paginate(grid, pieces, gap)
 
-    for index, vc_list in enumerate(chunks):
-        if len(chunks) == 1:
-            sub, mapping = grid, dict((i, i) for i in range(grid.n_cols))
-        else:
-            sub, mapping = grid.column_subset(vc_list)
-        sub_placed = remap_placed(placed, mapping)
+    plans = []
+    number = 0
+    for index, page in enumerate(pages):
+        plan = Plan(grid, warnings, index + 1, len(pages))
+        y_off = 0.0
+        for vr_list, vc_list in page:
+            sub, row_map, col_map = _sub_grid(grid, vr_list, vc_list)
+            sub_placed = remap_placed(placed, row_map, col_map)
 
-        fills = build_fills(sub, sub_placed, merge_fills, skip_white_fill)
-        lines = build_borders(sub, sub_placed, merge_borders)
-        texts = build_texts(sub, sub_placed, cap_height_ft, wrapped)
+            fills = build_fills(sub, sub_placed, merge_fills, skip_white_fill)
+            lines = build_borders(sub, sub_placed, merge_borders)
+            texts = build_texts(sub, sub_placed, cap_height_ft, wrapped)
 
-        if y_off:
-            fills = [f._replace(rect=_shift_rect(f.rect, y_off)) for f in fills]
-            lines = [l._replace(p1=(l.p1[0], l.p1[1] + y_off),
-                                p2=(l.p2[0], l.p2[1] + y_off)) for l in lines]
-            texts = [t._replace(y=t.y + y_off) for t in texts]
+            if y_off:
+                fills = [f._replace(rect=_shift_rect(f.rect, y_off)) for f in fills]
+                lines = [l._replace(p1=(l.p1[0], l.p1[1] + y_off),
+                                    p2=(l.p2[0], l.p2[1] + y_off)) for l in lines]
+                texts = [t._replace(y=t.y + y_off) for t in texts]
 
-        plan.fills.extend(fills)
-        plan.lines.extend(lines)
-        plan.texts.extend(texts)
-        plan.blocks.append((index + 1, [grid.cols[i] for i in vc_list],
-                            sub.total_width_ft, sub.total_height_ft))
-        y_off -= sub.total_height_ft + gap
+            plan.fills.extend(fills)
+            plan.lines.extend(lines)
+            plan.texts.extend(texts)
 
-    return plan
+            number += 1
+            plan.blocks.append((number,
+                                [grid.cols[i] for i in vc_list],
+                                [grid.rows[i] for i in vr_list],
+                                sub.total_width_ft, sub.total_height_ft))
+            plan.width_ft = max(plan.width_ft, sub.total_width_ft)
+            plan.height_ft += sub.total_height_ft + (gap if y_off else 0.0)
+            y_off -= sub.total_height_ft + gap
+
+        plans.append(plan)
+
+    return plans
 
 
-# ---------------------------------------------------------------- splitting wide tables
+def _sub_grid(grid, vr_list, vc_list):
+    """The grid for one block, with the old -> new index maps. The whole table
+    is its own sub-grid, and cloning it would only cost time."""
+    if (vr_list == list(range(grid.n_rows))
+            and vc_list == list(range(grid.n_cols))):
+        return (grid,
+                dict((i, i) for i in range(grid.n_rows)),
+                dict((i, i) for i in range(grid.n_cols)))
+    return grid.subset(vr_list, vc_list)
+
+
+def paginate(grid, pieces, gap_ft):
+    """
+    Group the stacked blocks into parts, each no taller than
+    MAX_TABLE_HEIGHT_MM. -> [[(vr_list, vc_list), ...], ...]
+
+    A block is never broken up here: split_rows has already made sure no single
+    block is taller than one part on its own, so a part always holds at least
+    one block even when that block is over the limit (a single row taller than
+    the sheet cannot be helped).
+    """
+    max_mm = getattr(cfg, 'MAX_TABLE_HEIGHT_MM', None)
+    max_ft = mm_to_feet(max_mm) if max_mm else 0.0
+    if not max_ft:
+        return [list(pieces)]
+
+    pages = []
+    current = []
+    used = 0.0
+    for piece in pieces:
+        height = grid.height_of(piece[0])
+        need = height if not current else height + gap_ft
+        if current and used + need > max_ft + 1e-9:
+            pages.append(current)
+            current, used, need = [], 0.0, height
+        current.append(piece)
+        used += need
+    if current:
+        pages.append(current)
+    return pages
+
+
+# ---------------------------------------------------------------- splitting
 
 def _shift_rect(rect, dy):
     return Rect(rect.x_left, rect.y_top + dy, rect.x_right, rect.y_bottom + dy)
@@ -177,6 +258,63 @@ def _is_redundant(sig_a, sig_b):
     return overlap
 
 
+def _split_axis(sizes, max_ft, crossing, repeat_n, is_redundant=None):
+    """
+    Cut one axis of the grid into chunks, each no longer than max_ft.
+    -> [([indices...], cut_is_dirty), ...]
+
+    sizes:      length of every index along the axis, in feet
+    crossing:   boundaries crossed by a merged cell (boundary b sits between
+                index b-1 and index b); a cut there halves that cell's text, so
+                one is only made when nothing cleaner is available
+    repeat_n:   repeat the first N indices (the headers) at the start of every
+                later chunk
+    is_redundant(a, b): optional test for "index b is already doing index a's
+                job", used to drop a header repeat the sheet makes itself
+
+    Both axes split the same way, which is why this is written once: columns
+    against MAX_TABLE_WIDTH_MM, rows against MAX_TABLE_HEIGHT_MM.
+    """
+    n = len(sizes)
+    if not max_ft or n == 0 or sum(sizes) <= max_ft:
+        return [(list(range(n)), False)]
+
+    repeat_n = max(0, min(int(repeat_n or 0), n - 1))
+
+    chunks = []
+    start = 0
+    while start < n:
+        prefix = [i for i in range(repeat_n) if i < start] if chunks else []
+        # If this chunk already starts with indices identical to the header
+        # ones, do not repeat them -- otherwise two identical headers end up
+        # next to each other (measured: column V of Part1 is a second LOT RC.)
+        if prefix and is_redundant:
+            k = len(prefix)
+            body = list(range(start, min(start + k, n)))
+            if len(body) == k and all(is_redundant(prefix[i], body[i])
+                                      for i in range(k)):
+                prefix = []
+        used = sum(sizes[i] for i in prefix)
+        i = start
+        last_fit = start
+        best_clean = None
+        while i < n:
+            nxt = used + sizes[i]
+            if nxt > max_ft and i > start:
+                break
+            used = nxt
+            last_fit = i
+            if (i + 1) not in crossing:
+                best_clean = i
+            i += 1
+        end = best_clean if (best_clean is not None and best_clean >= start) else last_fit
+        chunks.append((prefix + list(range(start, end + 1)),
+                       (end + 1) in crossing))
+        start = end + 1
+
+    return chunks
+
+
 def split_columns(grid, placed, warnings=None):
     """
     Cut the visible columns into blocks, each no wider than MAX_TABLE_WIDTH_MM.
@@ -188,73 +326,87 @@ def split_columns(grid, placed, warnings=None):
     half. Only when no clean cut point exists is one forced, with a warning.
     """
     max_mm = getattr(cfg, 'MAX_TABLE_WIDTH_MM', None)
-    n = grid.n_cols
-    if not max_mm or n == 0:
-        return [list(range(n))]
-    max_ft = mm_to_feet(max_mm)
-    if grid.total_width_ft <= max_ft:
-        return [list(range(n))]
+    max_ft = mm_to_feet(max_mm) if max_mm else 0.0
 
-    repeat_n = max(0, min(int(getattr(cfg, 'REPEAT_LEADING_COLS', 0) or 0), n - 1))
-
-    # Column boundaries crossed by a merged cell (boundary b sits between
-    # column b-1 and column b)
     crossing = set()
     for cell, vr0, vc0, vr1, vc1 in placed:
         for b in range(vc0 + 1, vc1 + 1):
             crossing.add(b)
 
+    repeat_n = getattr(cfg, 'REPEAT_LEADING_COLS', 0)
     signatures = _column_signatures(grid, placed) if repeat_n else {}
 
-    chunks = []
-    start = 0
-    while start < n:
-        prefix = [c for c in range(repeat_n) if c < start] if chunks else []
-        # If this block already starts with columns identical to the row-header
-        # columns, do not repeat them -- otherwise two identical headers end up
-        # side by side (measured: column V of Part1 is a second LOT RC.)
-        if prefix:
-            k = len(prefix)
-            body = list(range(start, min(start + k, n)))
-            if len(body) == k and all(_is_redundant(signatures.get(prefix[i]),
-                                                     signatures.get(body[i]))
-                                      for i in range(k)):
-                prefix = []
-        width = sum(grid.col_widths_ft[c] for c in prefix)
-        c = start
-        last_fit = start
-        best_clean = None
-        while c < n:
-            nxt = width + grid.col_widths_ft[c]
-            if nxt > max_ft and c > start:
-                break
-            width = nxt
-            last_fit = c
-            if (c + 1) not in crossing:
-                best_clean = c
-            c += 1
-        end = best_clean if (best_clean is not None and best_clean >= start) else last_fit
-        if (end + 1) in crossing and warnings is not None:
-            msg = ('Table split between columns %d and %d cuts through a merged '
-                   'cell - that cell is drawn in both blocks'
-                   % (grid.cols[end], grid.cols[end + 1]))
-            if msg not in warnings:
-                warnings.append(msg)
-        chunks.append(prefix + list(range(start, end + 1)))
-        start = end + 1
+    def redundant(a, b):
+        return _is_redundant(signatures.get(a), signatures.get(b))
 
-    return chunks
+    chunks = _split_axis(grid.col_widths_ft, max_ft, crossing, repeat_n,
+                         redundant if repeat_n else None)
+
+    out = []
+    for vc_list, dirty in chunks:
+        if dirty and warnings is not None:
+            end = vc_list[-1]
+            _warn(warnings,
+                  'Table split between columns %d and %d cuts through a merged '
+                  'cell - that cell is drawn in both blocks'
+                  % (grid.cols[end], grid.cols[end + 1]))
+        out.append(vc_list)
+    return out
 
 
-def remap_placed(placed, mapping):
-    """Remap the visible column indices in `placed` on to the sub-grid; cells
-    lying entirely outside the block are dropped."""
+def split_rows(grid, placed, warnings=None):
+    """
+    Cut the visible rows into bands, each no taller than MAX_TABLE_HEIGHT_MM.
+    -> [[visible row indices...], ...]; the whole table as one band when it
+    already fits.
+
+    This is what saves a plain long schedule: it is narrow enough never to be
+    split by column, yet far too tall for one sheet. The first
+    REPEAT_LEADING_ROWS rows -- the column headers -- are repeated at the top of
+    every later band, so a part read on its own still says what its columns are.
+
+    No redundancy test here, unlike the column side: a sheet repeating its own
+    header rows partway down is not something these tables do.
+    """
+    max_mm = getattr(cfg, 'MAX_TABLE_HEIGHT_MM', None)
+    max_ft = mm_to_feet(max_mm) if max_mm else 0.0
+
+    crossing = set()
+    for cell, vr0, vc0, vr1, vc1 in placed:
+        for b in range(vr0 + 1, vr1 + 1):
+            crossing.add(b)
+
+    chunks = _split_axis(grid.row_heights_ft, max_ft, crossing,
+                         getattr(cfg, 'REPEAT_LEADING_ROWS', 0))
+
+    out = []
+    for vr_list, dirty in chunks:
+        if dirty and warnings is not None:
+            end = vr_list[-1]
+            _warn(warnings,
+                  'Table split between rows %d and %d cuts through a merged '
+                  'cell - that cell is drawn in both parts'
+                  % (grid.rows[end], grid.rows[end + 1]))
+        out.append(vr_list)
+    return out
+
+
+def _warn(warnings, msg):
+    if msg not in warnings:
+        warnings.append(msg)
+
+
+def remap_placed(placed, row_map, col_map):
+    """Remap the visible row and column indices in `placed` on to the sub-grid;
+    cells lying entirely outside the block are dropped, and one straddling its
+    edge is clipped to what the block shows."""
     out = []
     for cell, vr0, vc0, vr1, vc1 in placed:
-        inside = [mapping[c] for c in range(vc0, vc1 + 1) if c in mapping]
-        if not inside:
+        rows = [row_map[r] for r in range(vr0, vr1 + 1) if r in row_map]
+        cols = [col_map[c] for c in range(vc0, vc1 + 1) if c in col_map]
+        if not rows or not cols:
             continue
-        out.append((cell, vr0, min(inside), vr1, max(inside)))
+        out.append((cell, min(rows), min(cols), max(rows), max(cols)))
     return out
 
 

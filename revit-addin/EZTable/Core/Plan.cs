@@ -17,6 +17,15 @@ namespace EZTable.Core
         public List<TextItem> Texts { get; } = new List<TextItem>();
         public List<string> Warnings { get; }
 
+        /// <summary>Which part of the table this is, and how many there are. A
+        /// table that fits one sheet is part 1 of 1.</summary>
+        public int Part { get; set; } = 1;
+        public int PartCount { get; set; } = 1;
+
+        /// <summary>What this part occupies on paper, in feet.</summary>
+        public double WidthFt { get; set; }
+        public double HeightFt { get; set; }
+
         public Plan(SheetGrid grid, List<string> warnings)
         {
             Grid = grid;
@@ -28,11 +37,15 @@ namespace EZTable.Core
         /// there is no base type. Layout and rendering must agree on the cap height,
         /// so whatever is passed here is also what StyleFactory scales its derived
         /// types from.
+        ///
+        /// -> one Plan per part. An over-wide table is split by column and the
+        /// blocks stacked downwards; once that stack passes MaxTableHeightMm it is
+        /// cut into parts, each of which becomes its own drafting view to be placed
+        /// on its own sheet. Nothing is ever scaled -- see Config.MaxTableHeightMm.
         /// </summary>
-        public static Plan BuildPlan(SheetData sheet, double? baseCapHeightFt = null, bool mergeBorders = true, bool mergeFills = true, bool skipWhiteFill = true)
+        public static List<Plan> BuildPlans(SheetData sheet, double? baseCapHeightFt = null, bool mergeBorders = true, bool mergeFills = true, bool skipWhiteFill = true)
         {
             var grid = new SheetGrid(sheet);
-            var plan = new Plan(grid, sheet.Warnings);
 
             var placed = new List<Tuple<CellModel, int, int, int, int>>();
             foreach (var cell in sheet.Cells)
@@ -45,120 +58,261 @@ namespace EZTable.Core
             Config.EnsureLoaded();
 
             // Fit to text: with all three switches off this is a strict 1:1
-            // copy of Excel's row and column sizes
+            // copy of Excel's row and column sizes. It has to run before any
+            // split decision, which is made against the final dimensions.
             if (Config.FitColumns || Config.FitRows || Config.WrapText)
                 FitToText(grid, placed, baseCapHeightFt);
             grid.RebuildEdges();
 
-            var chunks = SplitColumns(grid, placed, sheet.Warnings);
+            var colChunks = SplitColumns(grid, placed, sheet.Warnings);
+            var rowChunks = SplitRows(grid, placed, sheet.Warnings);
+
+            // Reading order: a column block in full (all its row bands) before
+            // the next column block starts.
+            var pieces = new List<Tuple<List<int>, List<int>>>();
+            foreach (var vcList in colChunks)
+                foreach (var vrList in rowChunks)
+                    pieces.Add(Tuple.Create(vrList, vcList));
+
             double gapFt = Utils.Geometry.MmToFeet(Config.BlockGapMm);
-            double yOff = 0.0;
+            var pages = Paginate(grid, pieces, gapFt);
 
-            foreach (var chunk in chunks)
+            var plans = new List<Plan>();
+            for (int index = 0; index < pages.Count; index++)
             {
-                var subGrid = grid.CloneForChunk(chunk);
-                var chunkPlaced = new List<Tuple<CellModel, int, int, int, int>>();
-                foreach (var p in placed)
+                var plan = new Plan(grid, sheet.Warnings)
                 {
-                    int n_vc0 = chunk.IndexOf(p.Item3);
-                    int n_vc1 = chunk.IndexOf(p.Item5);
-                    
-                    if (n_vc0 == -1 && n_vc1 == -1) continue;
-                    if (n_vc0 == -1) n_vc0 = 0;
-                    if (n_vc1 == -1) n_vc1 = chunk.Count - 1;
-                    
-                    chunkPlaced.Add(Tuple.Create(p.Item1, p.Item2, n_vc0, p.Item4, n_vc1));
+                    Part = index + 1,
+                    PartCount = pages.Count,
+                };
+                double yOff = 0.0;
+
+                foreach (var piece in pages[index])
+                {
+                    var subGrid = grid.Subset(piece.Item1, piece.Item2);
+                    var subPlaced = RemapPlaced(placed, piece.Item1, piece.Item2);
+
+                    var fills = BuildFills(subGrid, subPlaced, mergeFills, skipWhiteFill && Config.SkipWhiteFill);
+                    var lines = BuildBorders(subGrid, subPlaced, mergeBorders);
+                    var texts = BuildTexts(subGrid, subPlaced, baseCapHeightFt);
+
+                    foreach (var f in fills) f.Rect = f.Rect.ShiftY(-yOff);
+                    foreach (var l in lines)
+                    {
+                        l.P1 = Tuple.Create(l.P1.Item1, l.P1.Item2 - yOff);
+                        l.P2 = Tuple.Create(l.P2.Item1, l.P2.Item2 - yOff);
+                    }
+                    foreach (var t in texts) t.Y -= yOff;
+
+                    plan.Fills.AddRange(fills);
+                    plan.Lines.AddRange(lines);
+                    plan.Texts.AddRange(texts);
+
+                    plan.WidthFt = Math.Max(plan.WidthFt, subGrid.TotalWidthFt);
+                    plan.HeightFt += subGrid.TotalHeightFt + (yOff > 0 ? gapFt : 0.0);
+
+                    yOff += subGrid.TotalHeightFt + gapFt;
                 }
 
-                var fills = BuildFills(subGrid, chunkPlaced, mergeFills, skipWhiteFill && Config.SkipWhiteFill);
-                var lines = BuildBorders(subGrid, chunkPlaced, mergeBorders);
-                var texts = BuildTexts(subGrid, chunkPlaced, baseCapHeightFt);
-
-                foreach (var f in fills) f.Rect = f.Rect.ShiftY(-yOff);
-                foreach (var l in lines)
-                {
-                    l.P1 = Tuple.Create(l.P1.Item1, l.P1.Item2 - yOff);
-                    l.P2 = Tuple.Create(l.P2.Item1, l.P2.Item2 - yOff);
-                }
-                foreach (var t in texts) t.Y -= yOff;
-
-                plan.Fills.AddRange(fills);
-                plan.Lines.AddRange(lines);
-                plan.Texts.AddRange(texts);
-
-                yOff += subGrid.TotalHeightFt + gapFt;
+                plans.Add(plan);
             }
 
-            return plan;
+            return plans;
         }
 
-        private static List<List<int>> SplitColumns(SheetGrid grid, List<Tuple<CellModel, int, int, int, int>> placed, List<string> warnings)
+        /// <summary>
+        /// Group the stacked blocks into parts, each no taller than
+        /// MaxTableHeightMm. A block is never broken up here -- SplitRows has
+        /// already made sure none is taller than one part on its own -- so a
+        /// part always holds at least one block.
+        /// </summary>
+        private static List<List<Tuple<List<int>, List<int>>>> Paginate(SheetGrid grid, List<Tuple<List<int>, List<int>>> pieces, double gapFt)
         {
-            Config.EnsureLoaded();
-            // MaxTableWidthMm <= 0 disables splitting
-            double maxFt = Config.MaxTableWidthMm > 0
-                ? Utils.Geometry.MmToFeet(Config.MaxTableWidthMm)
+            var pages = new List<List<Tuple<List<int>, List<int>>>>();
+            double maxFt = Config.MaxTableHeightMm > 0
+                ? Utils.Geometry.MmToFeet(Config.MaxTableHeightMm)
                 : 0.0;
-            var crossing = new HashSet<int>();
-            foreach (var p in placed)
-            {
-                if (p.Item3 != p.Item5)
-                {
-                    for (int c = p.Item3 + 1; c <= p.Item5; c++) crossing.Add(c);
-                }
-            }
-
-            var chunks = new List<List<int>>();
-            int start = 0;
-            int n = grid.NCols;
-            int repeatCols = Math.Max(0, Config.RepeatLeadingCols);
-
             if (maxFt <= 0)
             {
-                var all = new List<int>();
-                for (int i = 0; i < n; i++) all.Add(i);
-                chunks.Add(all);
+                pages.Add(new List<Tuple<List<int>, List<int>>>(pieces));
+                return pages;
+            }
+
+            var current = new List<Tuple<List<int>, List<int>>>();
+            double used = 0.0;
+            foreach (var piece in pieces)
+            {
+                double height = grid.HeightOf(piece.Item1);
+                double need = current.Count == 0 ? height : height + gapFt;
+                if (current.Count > 0 && used + need > maxFt + 1e-9)
+                {
+                    pages.Add(current);
+                    current = new List<Tuple<List<int>, List<int>>>();
+                    used = 0.0;
+                    need = height;
+                }
+                current.Add(piece);
+                used += need;
+            }
+            if (current.Count > 0) pages.Add(current);
+            return pages;
+        }
+
+        /// <summary>
+        /// Cut one axis of the grid into chunks, each no longer than maxFt.
+        /// -> (indices, cut is dirty), the flag saying the cut went through a
+        /// merged cell because nothing cleaner was available.
+        ///
+        /// Both axes split the same way, which is why this is written once:
+        /// columns against MaxTableWidthMm, rows against MaxTableHeightMm.
+        /// `crossing` holds the boundaries a merged cell straddles (boundary b
+        /// sits between index b-1 and index b), and repeatN how many leading
+        /// indices -- the headers -- to repeat on every later chunk.
+        /// </summary>
+        private static List<Tuple<List<int>, bool>> SplitAxis(List<double> sizes, double maxFt, HashSet<int> crossing, int repeatN)
+        {
+            int n = sizes.Count;
+            var chunks = new List<Tuple<List<int>, bool>>();
+
+            if (maxFt <= 0 || n == 0 || sizes.Sum() <= maxFt)
+            {
+                chunks.Add(Tuple.Create(Enumerable.Range(0, n).ToList(), false));
                 return chunks;
             }
 
+            repeatN = Math.Max(0, Math.Min(repeatN, n - 1));
+
+            int start = 0;
             while (start < n)
             {
                 var prefix = new List<int>();
-                if (start > 0 && repeatCols > 0)
+                if (chunks.Count > 0)
                 {
-                    for (int i = 0; i < Math.Min(repeatCols, start); i++) prefix.Add(i);
+                    for (int i = 0; i < Math.Min(repeatN, start); i++) prefix.Add(i);
                 }
 
-                double width = prefix.Sum(c => grid.ColWidthsFt[c]);
-                int c_idx = start;
-                int last_fit = start;
-                int? best_clean = null;
+                double used = prefix.Sum(i => sizes[i]);
+                int idx = start;
+                int lastFit = start;
+                int? bestClean = null;
 
-                while (c_idx < n)
+                while (idx < n)
                 {
-                    double nxt = width + grid.ColWidthsFt[c_idx];
-                    if (nxt > maxFt && c_idx > start) break;
-                    width = nxt;
-                    last_fit = c_idx;
-                    if (!crossing.Contains(c_idx + 1)) best_clean = c_idx;
-                    c_idx++;
+                    double nxt = used + sizes[idx];
+                    if (nxt > maxFt && idx > start) break;
+                    used = nxt;
+                    lastFit = idx;
+                    if (!crossing.Contains(idx + 1)) bestClean = idx;
+                    idx++;
                 }
 
-                int end = (best_clean.HasValue && best_clean.Value >= start) ? best_clean.Value : last_fit;
-                
-                if (crossing.Contains(end + 1))
-                {
-                    warnings?.Add($"Table split between columns {grid.Cols[end]} and {grid.Cols[end + 1]} cuts through a merged cell.");
-                }
+                int end = (bestClean.HasValue && bestClean.Value >= start) ? bestClean.Value : lastFit;
 
                 var chunk = new List<int>(prefix);
                 for (int i = start; i <= end; i++) chunk.Add(i);
-                chunks.Add(chunk);
+                chunks.Add(Tuple.Create(chunk, crossing.Contains(end + 1)));
 
                 start = end + 1;
             }
 
             return chunks;
+        }
+
+        /// <summary>
+        /// Cut the visible columns into blocks, each no wider than
+        /// MaxTableWidthMm. Cut points prefer boundaries not crossed by a merged
+        /// cell -- splitting through the middle of one cuts its text in half.
+        /// </summary>
+        private static List<List<int>> SplitColumns(SheetGrid grid, List<Tuple<CellModel, int, int, int, int>> placed, List<string> warnings)
+        {
+            Config.EnsureLoaded();
+            double maxFt = Config.MaxTableWidthMm > 0
+                ? Utils.Geometry.MmToFeet(Config.MaxTableWidthMm)
+                : 0.0;
+
+            var crossing = new HashSet<int>();
+            foreach (var p in placed)
+                for (int c = p.Item3 + 1; c <= p.Item5; c++) crossing.Add(c);
+
+            var chunks = SplitAxis(grid.ColWidthsFt, maxFt, crossing, Config.RepeatLeadingCols);
+
+            var out_ = new List<List<int>>();
+            foreach (var chunk in chunks)
+            {
+                if (chunk.Item2 && warnings != null)
+                {
+                    int end = chunk.Item1.Last();
+                    Warn(warnings, $"Table split between columns {grid.Cols[end]} and {grid.Cols[end + 1]} cuts through a merged cell - that cell is drawn in both blocks.");
+                }
+                out_.Add(chunk.Item1);
+            }
+            return out_;
+        }
+
+        /// <summary>
+        /// Cut the visible rows into bands, each no taller than
+        /// MaxTableHeightMm. This is what saves a plain long schedule: narrow
+        /// enough never to be split by column, yet far too tall for one sheet.
+        /// The first RepeatLeadingRows rows are repeated at the top of every
+        /// later band, so a part read on its own still names its columns.
+        /// </summary>
+        private static List<List<int>> SplitRows(SheetGrid grid, List<Tuple<CellModel, int, int, int, int>> placed, List<string> warnings)
+        {
+            Config.EnsureLoaded();
+            double maxFt = Config.MaxTableHeightMm > 0
+                ? Utils.Geometry.MmToFeet(Config.MaxTableHeightMm)
+                : 0.0;
+
+            var crossing = new HashSet<int>();
+            foreach (var p in placed)
+                for (int r = p.Item2 + 1; r <= p.Item4; r++) crossing.Add(r);
+
+            var chunks = SplitAxis(grid.RowHeightsFt, maxFt, crossing, Config.RepeatLeadingRows);
+
+            var out_ = new List<List<int>>();
+            foreach (var chunk in chunks)
+            {
+                if (chunk.Item2 && warnings != null)
+                {
+                    int end = chunk.Item1.Last();
+                    Warn(warnings, $"Table split between rows {grid.Rows[end]} and {grid.Rows[end + 1]} cuts through a merged cell - that cell is drawn in both parts.");
+                }
+                out_.Add(chunk.Item1);
+            }
+            return out_;
+        }
+
+        private static void Warn(List<string> warnings, string message)
+        {
+            if (!warnings.Contains(message)) warnings.Add(message);
+        }
+
+        /// <summary>
+        /// Remap the visible row and column indices on to a block's sub-grid;
+        /// cells lying entirely outside it are dropped, and one straddling its
+        /// edge is clipped to what the block shows.
+        /// </summary>
+        private static List<Tuple<CellModel, int, int, int, int>> RemapPlaced(List<Tuple<CellModel, int, int, int, int>> placed, List<int> chunkRows, List<int> chunkCols)
+        {
+            var rowMap = new Dictionary<int, int>();
+            for (int i = 0; i < chunkRows.Count; i++) rowMap[chunkRows[i]] = i;
+            var colMap = new Dictionary<int, int>();
+            for (int i = 0; i < chunkCols.Count; i++) colMap[chunkCols[i]] = i;
+
+            var out_ = new List<Tuple<CellModel, int, int, int, int>>();
+            foreach (var p in placed)
+            {
+                var rows = new List<int>();
+                for (int r = p.Item2; r <= p.Item4; r++)
+                    if (rowMap.TryGetValue(r, out int vr)) rows.Add(vr);
+                var cols = new List<int>();
+                for (int c = p.Item3; c <= p.Item5; c++)
+                    if (colMap.TryGetValue(c, out int vc)) cols.Add(vc);
+
+                if (rows.Count == 0 || cols.Count == 0) continue;
+                out_.Add(Tuple.Create(p.Item1, rows.Min(), cols.Min(), rows.Max(), cols.Max()));
+            }
+            return out_;
         }
 
         /// <summary>

@@ -78,6 +78,7 @@ The same for both builds:
 | Alignment and text wrapping | Rotated text (drawn horizontally) |
 | Hidden rows and columns (skipped, leaving no gap) | Legacy `.xls` (only `.xlsx`) |
 | Over-wide tables split by column and stacked | |
+| Over-tall tables split into a view per sheet | |
 | Columns widened and rows heightened so text fits | |
 
 ---
@@ -299,6 +300,39 @@ out to duplicate content already there, it is dropped automatically, so you
 never get two identical headers side by side.
 
 Set it to `0` to disable splitting and draw the table full width.
+</details>
+
+<details>
+<summary><b>The table is too tall for an A3 sheet</b></summary>
+
+<br>
+
+Splitting by column fixes the width but makes the table taller — and a plain
+long schedule is too tall to begin with. Scaling is no more acceptable here than
+it is for width, so instead the table is **cut into parts, one drafting view
+each**, for you to place on a sheet apiece:
+
+```python
+MAX_TABLE_HEIGHT_MM = 270.0    # usable height of a landscape A3 minus the margins
+REPEAT_LEADING_ROWS = 1        # repeat the first N rows (column headers); 0 = off
+PART_NAME_TEMPLATE = '{name} ({part}/{parts})'
+```
+
+The views come out as `Table (1/2)`, `Table (2/2)`, and so on; a table that fits
+on one sheet keeps the plain `Table`, with no suffix. Import switches to the
+first part and lists the rest in the output window.
+
+Whole blocks are kept together where they fit. A single block taller than one
+sheet on its own is cut by row, with the first `REPEAT_LEADING_ROWS` rows
+repeated at the top of each part so a part read on its own still names its
+columns — and, as with columns, cut points avoid merged cells where possible.
+
+**Refresh treats the parts as one table**: they are redrawn together, and if the
+workbook grew or shrank enough to change the part count, the extra views are
+created for you and the ones no longer needed are emptied (never deleted — a
+viewport may still be placed on a sheet). Both are listed in the output.
+
+Set it to `0` to keep everything in one view, however tall.
 </details>
 
 <details>

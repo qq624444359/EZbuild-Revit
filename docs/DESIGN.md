@@ -133,6 +133,43 @@ How `Part1` (549mm) splits at different limits:
 `A+` marks the repeated row-header column. Stacked, Part1 becomes
 376 × 192mm and fits A3.
 
+### Fitting an over-tall table on to A3
+
+Stacking the column blocks trades width for height, so a table that no longer
+overflows the sheet sideways can overflow it downwards instead — and a plain
+long schedule, never split by column at all, starts that way. Scaling is no more
+acceptable here than it was for width, so the table is **cut into parts, one
+drafting view each**, to be placed on a sheet apiece.
+
+```python
+MAX_TABLE_HEIGHT_MM = 270.0    # usable height of a landscape A3; 0 = one view, however tall
+REPEAT_LEADING_ROWS = 1        # repeat the first N rows (column headers) in each part
+PART_NAME_TEMPLATE = '{name} ({part}/{parts})'   # Table (1/2), Table (2/2)
+```
+
+The layout runs in three steps, all inside `build_plans`:
+
+1. **`split_columns`** cuts the columns into blocks against `MAX_TABLE_WIDTH_MM`
+   (unchanged).
+2. **`split_rows`** cuts the rows into bands against `MAX_TABLE_HEIGHT_MM`, so
+   no single block is taller than one sheet on its own. Both axes go through the
+   same `_split_axis` — prefer a cut no merged cell crosses, repeat the leading
+   indices as a header, warn when a cut has to be forced.
+3. **`paginate`** fills one part at a time with whole blocks, in reading order
+   (a column block in full, then the next), starting a new part as soon as the
+   next block plus its `BLOCK_GAP_MM` would not fit.
+
+Every part is a `Plan` of its own carrying `part` / `part_count`, and
+`job.draw_new_views` gives each one its own drafting view. Each view is stamped
+with its part number, so Refresh groups a table's views back together
+(`storage.find_tables`) and redraws them as a unit: one revision of the workbook
+across every sheet. A part count that changed since the import creates the
+missing views and empties — never deletes — the ones no longer needed, because
+a viewport may still be placed on a sheet.
+
+A table that fits on one sheet is unaffected: one part, plain view name, no
+suffix.
+
 ### When the output window appears
 
 `REPORT_MODE` in `config.py`:

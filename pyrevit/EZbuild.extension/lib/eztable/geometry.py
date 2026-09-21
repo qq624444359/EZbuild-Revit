@@ -276,16 +276,30 @@ class SheetGrid(object):
         obj.rebuild_edges()
         return obj
 
-    def column_subset(self, vc_list):
+    def subset(self, vr_list, vc_list):
         """
-        Take a subset of visible columns as a new grid (rows unchanged), used
-        when splitting an over-wide table.
-        -> (sub-grid, {original visible column index: new visible column index})
+        Take a rectangular subset of the visible rows and columns as a new grid,
+        used when splitting an over-wide table by column or an over-tall one by
+        row.
+        -> (sub-grid, {old visible row: new visible row},
+                      {old visible column: new visible column})
         """
+        rows = [self.rows[i] for i in vr_list]
+        heights = [self.row_heights_ft[i] for i in vr_list]
         cols = [self.cols[i] for i in vc_list]
         widths = [self.col_widths_ft[i] for i in vc_list]
-        sub = SheetGrid._clone(self.rows, cols, widths, self.row_heights_ft)
-        return sub, dict((vc, i) for i, vc in enumerate(vc_list))
+        sub = SheetGrid._clone(rows, cols, widths, heights)
+        return (sub,
+                dict((vr, i) for i, vr in enumerate(vr_list)),
+                dict((vc, i) for i, vc in enumerate(vc_list)))
+
+    def height_of(self, vr_list):
+        """Total height in feet of a subset of visible rows."""
+        return sum(self.row_heights_ft[i] for i in vr_list)
+
+    def width_of(self, vc_list):
+        """Total width in feet of a subset of visible columns."""
+        return sum(self.col_widths_ft[i] for i in vc_list)
 
     def grow_cols(self, vc0, vc1, needed_ft, max_growth=None):
         """Grow the total width of columns vc0..vc1 to needed_ft, sharing the

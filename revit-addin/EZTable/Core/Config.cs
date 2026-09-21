@@ -96,6 +96,21 @@ namespace EZTable.Core
         public static double BlockGapMm = 10.0;
         public static int RepeatLeadingCols = 1;
 
+        // ---------------------------------------------------- paging a tall table
+        // Splitting by column makes the table taller, and a plain long schedule
+        // is too tall to begin with. Past MaxTableHeightMm the table is cut into
+        // parts, one drafting view each, to be placed on a sheet apiece; a single
+        // block taller than the limit is cut by row, with the leading rows
+        // repeated as a header. Nothing is scaled. Set to 0 to keep everything in
+        // one view, however tall.
+        public static double MaxTableHeightMm = 270.0;
+        public static int RepeatLeadingRows = 1;
+
+        // How the parts are named: {name} is the view name, {part} the 1-based
+        // part number, {parts} the total. A table that fits one view keeps the
+        // plain name, with no suffix.
+        public static string PartNameTemplate = "{name} ({part}/{parts})";
+
         // ---------------------------------------------------------- fit to text
         // The default is to fit the table to its text: font size stays fixed, and
         // anything that does not fit widens the column and heightens the row.
@@ -196,6 +211,10 @@ namespace EZTable.Core
                 case "maxtablewidthmm": MaxTableWidthMm = Double(value, MaxTableWidthMm); return true;
                 case "blockgapmm": BlockGapMm = Double(value, BlockGapMm); return true;
                 case "repeatleadingcols": RepeatLeadingCols = Int(value, RepeatLeadingCols); return true;
+
+                case "maxtableheightmm": MaxTableHeightMm = Double(value, MaxTableHeightMm); return true;
+                case "repeatleadingrows": RepeatLeadingRows = Int(value, RepeatLeadingRows); return true;
+                case "partnametemplate": PartNameTemplate = value; return true;
 
                 case "wraptext": WrapText = Bool(value, WrapText); return true;
                 case "fitcolumns": FitColumns = Bool(value, FitColumns); return true;

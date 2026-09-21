@@ -122,29 +122,58 @@ namespace EZTable.Utils
         public double XAt(int vcEdge) => _xEdges[vcEdge];
         public double YAt(int vrEdge) => _yEdges[vrEdge];
 
-        public SheetGrid CloneForChunk(List<int> chunkCols)
+        /// <summary>
+        /// A rectangular subset of the visible rows and columns as a new grid,
+        /// used when splitting an over-wide table by column or an over-tall one
+        /// by row. Both lists hold visible indices of THIS grid.
+        /// </summary>
+        public SheetGrid Subset(List<int> chunkRows, List<int> chunkCols)
         {
             var sub = new SheetGrid();
-            sub.Rows = new List<int>(this.Rows);
-            sub._rowPos = new Dictionary<int, int>(this._rowPos);
-            sub.RowHeightsFt = new List<double>(this.RowHeightsFt);
-            
+
+            sub.Rows = new List<int>();
+            sub.RowHeightsFt = new List<double>();
+            sub._rowPos = new Dictionary<int, int>();
+            for (int i = 0; i < chunkRows.Count; i++)
+            {
+                int origVr = chunkRows[i];
+                sub.Rows.Add(this.Rows[origVr]);
+                sub._rowPos[this.Rows[origVr]] = i;
+                sub.RowHeightsFt.Add(this.RowHeightsFt[origVr]);
+            }
+
             sub.Cols = new List<int>();
             sub.ColWidthsFt = new List<double>();
             sub._colPos = new Dictionary<int, int>();
-            
-            for(int i = 0; i < chunkCols.Count; i++)
+            for (int i = 0; i < chunkCols.Count; i++)
             {
-                int orig_vc = chunkCols[i];
-                int orig_c = this.Cols[orig_vc];
-                
-                sub.Cols.Add(orig_c);
-                sub._colPos[orig_c] = i;
-                sub.ColWidthsFt.Add(this.ColWidthsFt[orig_vc]);
+                int origVc = chunkCols[i];
+                sub.Cols.Add(this.Cols[origVc]);
+                sub._colPos[this.Cols[origVc]] = i;
+                sub.ColWidthsFt.Add(this.ColWidthsFt[origVc]);
             }
-            
+
+            sub.OrigRowHeightsFt = new List<double>(sub.RowHeightsFt);
+            sub.OrigColWidthsFt = new List<double>(sub.ColWidthsFt);
+
             sub.RebuildEdges();
             return sub;
+        }
+
+        /// <summary>Total height in feet of a subset of visible rows.</summary>
+        public double HeightOf(List<int> chunkRows)
+        {
+            double total = 0.0;
+            foreach (int vr in chunkRows) total += RowHeightsFt[vr];
+            return total;
+        }
+
+        /// <summary>Total width in feet of a subset of visible columns.</summary>
+        public double WidthOf(List<int> chunkCols)
+        {
+            double total = 0.0;
+            foreach (int vc in chunkCols) total += ColWidthsFt[vc];
+            return total;
         }
 
         public void GrowCols(int vc0, int vc1, double needFt, double maxGrowthFactor)

@@ -11,8 +11,9 @@ from __future__ import division, unicode_literals
 
 __title__ = 'Import\nExcel'
 __doc__ = ('Draw an Excel worksheet into a 1:1 drafting view using detail lines, '
-           'filled regions and text notes. The view is stamped with its source '
-           'so Refresh can update it later.')
+           'filled regions and text notes. A table too tall for one sheet is '
+           'split into a view per part. Each view is stamped with its source so '
+           'Refresh can update it later.')
 
 import traceback
 
@@ -77,14 +78,16 @@ def main():
         return
 
     try:
-        view = job.draw_new_view(cfg.view_name(sheet_name, path))
+        views = job.draw_new_views(cfg.view_name(sheet_name, path))
     except Exception:
         forms.alert('Drawing failed and was rolled back:\n%s'
                     % traceback.format_exc(), title='EZTable', exitscript=True)
         return
 
+    # A tall table lands in several views, one per sheet; open the first, and
+    # let the report list the rest.
     try:
-        uidoc.ActiveView = view
+        uidoc.ActiveView = views[0]
     except Exception:
         pass
 
@@ -93,7 +96,9 @@ def main():
     # the first print.
     if reportmod.should_report(job):
         output = script.get_output()
-        reportmod.print_job(output, job, view, 'Import complete', output.linkify)
+        title = ('Import complete - %d parts' % len(views)) if len(views) > 1 \
+            else 'Import complete'
+        reportmod.print_job(output, job, views, title, output.linkify)
 
 
 if __name__ == '__main__':

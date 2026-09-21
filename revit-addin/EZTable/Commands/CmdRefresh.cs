@@ -19,6 +19,10 @@ namespace EZTable.Commands
     ///
     /// **The view itself is never deleted** -- its id survives, so viewports
     /// already placed on sheets stay valid.
+    ///
+    /// A table too tall for one sheet lives in several views, one part each.
+    /// Those are refreshed as a unit: redrawing one part on its own would leave
+    /// the others showing an older revision of the same workbook.
     /// </summary>
     [Transaction(TransactionMode.Manual)]
     public class CmdRefresh : IExternalCommand
@@ -31,7 +35,7 @@ namespace EZTable.Commands
                 UIDocument uidoc = commandData.Application.ActiveUIDocument;
                 Document doc = uidoc.Document;
 
-                var stamped = Storage.FindStampedViews(doc);
+                var stamped = Storage.FindTables(doc);
                 if (stamped.Count == 0)
                 {
                     TaskDialog.Show("EZTable Refresh",
@@ -55,9 +59,9 @@ namespace EZTable.Commands
                 catch (Exception) { }
 
                 var entries = stamped
-                    .Select(pair => new Entry(pair.Item1, pair.Item2))
-                    .OrderByDescending(e => hasActive && e.View.Id.Equals(activeId))
-                    .ThenBy(e => e.View.Name)
+                    .Select(members => new Entry(members))
+                    .OrderByDescending(e => hasActive && e.Views.Any(v => v.Id.Equals(activeId)))
+                    .ThenBy(e => e.Views[0].Name)
                     .ToList();
 
                 var rows = entries.Select((e, i) => new UI.RefreshSelector.Row(i, e.Label)).ToList();
@@ -74,6 +78,8 @@ namespace EZTable.Commands
                 var done = new List<string>();
                 var skipped = new List<string>();
                 var failed = new List<string>();
+                var created = new List<string>();
+                var emptied = new List<string>();
 
                 foreach (int index in dialog.SelectedIndices)
                 {
@@ -82,17 +88,18 @@ namespace EZTable.Commands
 
                     if (entry.State == Storage.Freshness.Missing)
                     {
-                        failed.Add(entry.View.Name + " - " + entry.Note);
+                        failed.Add(entry.Views[0].Name + " - " + entry.Note);
                         continue;
                     }
                     if (entry.State == Storage.Freshness.Fresh)
                     {
-                        skipped.Add(entry.View.Name + " - unchanged, skipped");
+                        skipped.Add(entry.Views[0].Name + " - unchanged, skipped");
                         continue;
                     }
 
-                    // One transaction per table, so a single failure cannot roll
-                    // back the tables already refreshed
+                    // One transaction per table -- every part of it included, so a
+                    // single failure cannot leave one part on a newer revision
+                    // than the rest, nor roll back the tables already refreshed
                     using (var t = new Transaction(doc, "EZTable: Refresh Table"))
                     {
                         t.Start();
@@ -100,21 +107,29 @@ namespace EZTable.Commands
                         {
                             var job = new TableJob(entry.Stamp.SourcePath,
                                                    entry.Stamp.SheetName).Prepare(doc);
-                            job.RedrawView(doc, entry.View);
+                            var outcome = job.RedrawViews(doc, entry.Views);
                             t.Commit();
-                            done.Add(string.Format("{0} - {1} fills, {2} lines, {3} texts",
-                                entry.View.Name, job.Drawing.Fills.Count,
-                                job.Drawing.Lines.Count, job.Drawing.Texts.Count));
+
+                            int fills = job.Drawings.Sum(d => d.Fills.Count);
+                            int lines = job.Drawings.Sum(d => d.Lines.Count);
+                            int texts = job.Drawings.Sum(d => d.Texts.Count);
+                            done.Add(string.Format("{0} - {1} fills, {2} lines, {3} texts{4}",
+                                string.Join(", ", outcome.Item1.Select(v => v.Name)),
+                                fills, lines, texts,
+                                job.PartCount > 1
+                                    ? string.Format(" ({0} parts)", job.PartCount) : ""));
+                            created.AddRange(outcome.Item2.Select(v => v.Name));
+                            emptied.AddRange(outcome.Item3.Select(v => v.Name));
                         }
                         catch (Exception ex)
                         {
                             t.RollBack();
-                            failed.Add(entry.View.Name + " - " + ex.Message);
+                            failed.Add(entry.Views[0].Name + " - " + ex.Message);
                         }
                     }
                 }
 
-                Summarise(done, skipped, failed);
+                Summarise(done, skipped, failed, created, emptied);
                 return failed.Count > 0 && done.Count == 0 ? Result.Failed : Result.Succeeded;
             }
             catch (Exception ex)
@@ -127,7 +142,8 @@ namespace EZTable.Commands
         // Refresh is an explicit action, so always report the outcome; failures
         // and skips have to be visible
         private static void Summarise(List<string> done, List<string> skipped,
-                                      List<string> failed)
+                                      List<string> failed, List<string> created,
+                                      List<string> emptied)
         {
             var lines = new List<string>
             {
@@ -141,21 +157,35 @@ namespace EZTable.Commands
             if (failed.Count > 0)
                 lines.Add("\nFailed:\n  " + string.Join("\n  ", failed));
 
+            // A workbook that grew or shrank changes how many sheets its table
+            // needs. Both directions need saying out loud: a new view is not on
+            // a sheet yet, and an emptied one is still sitting on the sheet it
+            // was placed on.
+            if (created.Count > 0)
+                lines.Add("\nNew parts - place these on sheets:\n  "
+                          + string.Join("\n  ", created));
+            if (emptied.Count > 0)
+                lines.Add("\nNo longer needed. Emptied but NOT deleted, since a "
+                          + "viewport may still be placed on a sheet:\n  "
+                          + string.Join("\n  ", emptied));
+
             TaskDialog.Show("EZTable Refresh", string.Join("\n", lines));
         }
 
+        /// <summary>One table: every view it is split across, and the state of
+        /// the workbook behind them.</summary>
         private class Entry
         {
-            public Autodesk.Revit.DB.View View { get; }
+            public List<Autodesk.Revit.DB.View> Views { get; }
             public Storage.Stamp Stamp { get; }
             public Storage.Freshness State { get; }
             public string Note { get; }
 
-            public Entry(Autodesk.Revit.DB.View view, Storage.Stamp stamp)
+            public Entry(List<Tuple<Autodesk.Revit.DB.View, Storage.Stamp>> members)
             {
-                View = view;
-                Stamp = stamp;
-                var status = Storage.IsStale(stamp);
+                Views = members.Select(m => m.Item1).ToList();
+                Stamp = members[0].Item2;
+                var status = Storage.IsStale(Stamp);
                 State = status.Item1;
                 Note = status.Item2;
             }
@@ -175,8 +205,12 @@ namespace EZTable.Commands
                     try { file = System.IO.Path.GetFileName(Stamp.SourcePath ?? "?"); }
                     catch (Exception) { file = "?"; }
 
+                    string name = Views[0].Name;
+                    if (Views.Count > 1)
+                        name = string.Format("{0} + {1} more", name, Views.Count - 1);
+
                     return string.Format("[{0}]  {1}  <-  {2} / {3}",
-                        state.PadRight(14), View.Name, file, Stamp.SheetName ?? "?");
+                        state.PadRight(14), name, file, Stamp.SheetName ?? "?");
                 }
             }
         }

@@ -64,6 +64,17 @@ BlockGapMm        = 10
 # Repeat the first N columns (row headers) at the start of each block; 0 = off
 RepeatLeadingCols = 1
 
+# ---------------------------------------------------- paging a tall table
+# Stacking the blocks makes the table taller, and a long schedule is too tall to
+# begin with. Past MaxTableHeightMm the table is cut into parts, one drafting
+# view each -- 'Table (1/2)', 'Table (2/2)' -- to be placed on a sheet apiece.
+# Set to 0 to keep everything in one view, however tall.
+MaxTableHeightMm  = 270
+# Repeat the first N rows (column headers) at the top of each row part; 0 = off
+RepeatLeadingRows = 1
+# {name} the view name, {part} the part number, {parts} the total
+PartNameTemplate  = {name} ({part}/{parts})
+
 # ---------------------------------------------------------------- fit to text
 # The default is to fit the table to its text: font size stays fixed, and
 # anything that does not fit widens the column and heightens the row.

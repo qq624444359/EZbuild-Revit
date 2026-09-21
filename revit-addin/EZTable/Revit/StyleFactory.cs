@@ -26,7 +26,7 @@ namespace EZTable.Revit
 
         /// <summary>
         /// The base text type's TEXT_SIZE in feet, or null when there is no base
-        /// type. Plan.BuildPlan needs it before any transaction opens, so that
+        /// type. Plan.BuildPlans needs it before any transaction opens, so that
         /// layout and rendering agree on the cap height.
         /// </summary>
         public double? BaseTextCapHeightFt()
