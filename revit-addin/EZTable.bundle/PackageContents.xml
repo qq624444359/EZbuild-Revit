@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  One Components block per Revit runtime. They cannot be merged, because Revit
+  2026 runs on .NET 8 and Revit 2027 on .NET 10, so each series needs the DLL
+  built for its own runtime. Widening SeriesMax over a single block would
+  declare support Revit cannot honour: the add-in simply fails to load.
+
+  Contents/2026/  built from net8.0-windows
+  Contents/2027/  built from net10.0-windows
+-->
+<ApplicationPackage SchemaVersion="1.0" AutodeskProduct="Revit" Name="EZTable" AppVersion="1.0.0" Description="Import Excel to Revit Drafting View" Author="Zachary Zhao">
+  <CompanyDetails Name="Pitayadesign" Email="pitayadesign.nz@gmail.com" Url="https://www.ezbuild.co.nz/" />
+
+  <Components Description="EZTable for Revit 2026 (.NET 8)">
+    <RuntimeRequirements OS="Win64" Platform="Revit" SeriesMin="R2026" SeriesMax="R2026" />
+    <ComponentEntry AppName="EZTable" Version="1.0.0" ModuleName="./Contents/2026/EZTable.addin" AppDescription="Imports Excel sheets accurately into Revit Drafting Views" LoadOnRevitStartup="True" />
+  </Components>
+
+  <Components Description="EZTable for Revit 2027 (.NET 10)">
+    <RuntimeRequirements OS="Win64" Platform="Revit" SeriesMin="R2027" SeriesMax="R2027" />
+    <ComponentEntry AppName="EZTable" Version="1.0.0" ModuleName="./Contents/2027/EZTable.addin" AppDescription="Imports Excel sheets accurately into Revit Drafting Views" LoadOnRevitStartup="True" />
+  </Components>
+</ApplicationPackage>
