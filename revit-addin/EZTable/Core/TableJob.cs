@@ -69,11 +69,7 @@ namespace EZTable.Core
             Config.EnsureLoaded();
             SourceHash = Revit.Storage.FileHash(Path);
 
-            // FileShare.ReadWrite so the file can be read even while the user
-            // has it open in Excel
-            using (var fs = new FileStream(Path, FileMode.Open, FileAccess.Read,
-                                           FileShare.ReadWrite))
-            using (var wb = new XLWorkbook(fs))
+            using (var wb = Utils.WorkbookLoader.Open(Path))
             {
                 Data = Utils.ExcelParser.ParseSheet(wb, SheetName);
             }

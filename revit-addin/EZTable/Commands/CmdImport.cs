@@ -95,11 +95,7 @@ namespace EZTable.Commands
         private static string PickSheet(string filePath)
         {
             List<string> sheetNames;
-            // FileShare.ReadWrite so the file can be read even while the user
-            // has it open in Excel
-            using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read,
-                                           FileShare.ReadWrite))
-            using (var wb = new ClosedXML.Excel.XLWorkbook(fs))
+            using (var wb = Utils.WorkbookLoader.Open(filePath))
             {
                 sheetNames = wb.Worksheets.Select(ws => ws.Name).ToList();
             }
