@@ -357,3 +357,35 @@ README 与页面均已注明，只装一个的人按提示编单目标即可。
 三轮下来版本这件事的教训（D11 → D14 → D15）：仓库的构建配置与 README 都曾
 落后于实际发布状态，我却先后把它们当过真相来源。版本、运行时、兼容性这类
 只有作者掌握的事实，应当先问再改。
+
+### D16 — 原生插件改用 NuGet 引用包编译，接入 CI（2026-10-11）
+
+起因：Autodesk 审核反馈建议对安装包做数字签名；免费路线 SignPath Foundation 要求
+**被签名的二进制必须在 CI 上从源码构建**。而原 csproj 用 `HintPath` 指向本机 Revit
+安装目录下的 `RevitAPI.dll`，GitHub 的构建机没有 Revit，所以根本编不了。README 的
+待办里早就记着这个卡点，并给出了两条路：改用 NuGet 上的 Revit API 包，或找台装了
+Revit 的机器打包。选了前者。
+
+* **引用包**：`Nice3point.Revit.Api.RevitAPI` / `RevitAPIUI`，按目标框架**锁定确切
+  版本**——net8.0 → `2026.4.10`，net10.0 → `2027.3.0`（两个包的 nuspec 分别只声明
+  `net8.0-windows7.0` / `net10.0-windows7.0`，与运行时划分完全吻合）。不用浮动版本
+  `2026.*`，是为了同一提交永远编出同一份二进制——这也是签名服务做来源校验的前提
+* **`ExcludeAssets="runtime"`**：让 Revit 的 DLL 只参与编译、不进输出目录。Revit
+  加载时自带一份，若随包附带会把它遮蔽掉。工作流里另加一道检查，包里一旦出现
+  `RevitAPI*.dll` 就直接失败（已做反向测试：手动塞一个进去，确认会报错退出）
+* **删除** `RevitApiDir` 与 `CheckRevitApi`：路径引用没了，它们无事可做。副作用是
+  贡献者编译不再需要装 Revit，只有运行才需要
+* **`PostBuild` 在 CI 下跳过**（GitHub Actions 设置 `CI=true`）：构建机上没有 Revit
+  可装，安装包由工作流另行组装
+
+工作流 `.github/workflows/build.yml`：`windows-latest`，装 .NET 8 + 10 两套 SDK，
+编两个目标，再按仓库里已有的 `revit-addin/EZTable.bundle` 布局组装——net8.0 的
+DLL 进 `Contents/2026/`，net10.0 的进 `Contents/2027/`，各自紧挨着已签入的
+`EZTable.addin`。文件集合与本地 `PostBuild` 安装的完全一致（只拷 `*.dll` 加配置
+样例，不带 `.pdb` / `.deps.json`）。产物 `EZTable.bundle` 上传为 Actions artifact。
+
+推送前在本地（Linux + `EnableWindowsTargeting`）实际编译验证：两个目标均 0 错误
+0 警告，输出无 Revit DLL，组装步骤产出的布局与 `PackageContents.xml` 声明的一致。
+
+README 待办两项随之更新：「提供预编译安装包」的卡点已解除，剩发布与签名；
+「原生版从未编译过」改为「能编译，但尚未在 Revit 里实测」。
