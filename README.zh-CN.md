@@ -40,15 +40,15 @@ EZTable 走第四条路：**把 Excel 直接画成 Revit 原生图元**（详图
 | 语言 | Python（IronPython 2.7） | C# / .NET |
 | 前提 | **要先装 pyRevit** | 不用，装完就能用 |
 | Revit 版本 | 2026 – 2027 | 2026 – 2027 |
-| 功能 | Import + Refresh + **Cleanup** | Import + Refresh |
+| 功能 | Import + Refresh + Cleanup | Import + Refresh + Cleanup |
 | 第三方依赖 | 无 | ClosedXML |
 | 改配置 | 改 `config.py`，重启 Revit | 改 `EZTable.config`，重开 Revit |
 | 安装 | 注册一个文件夹 | 目前要自己编译 |
 
 **怎么选：**
 
-- **已经在用 pyRevit → 选 pyRevit 版。** 装起来最省事，还多一个 Cleanup。
-- **不想装 pyRevit → 选原生版。** 功能上只差一个 Cleanup。
+- **已经在用 pyRevit → 选 pyRevit 版。** 装起来最省事。
+- **不想装 pyRevit → 选原生版。** 功能上什么都不缺，两个版本按钮完全一样。
 - 两个版本的**几何算法完全一致**（同一套单位换算、文字标定值、边框合并、
   列宽自适应），画出来的表格是一样的。
 - **两版共用同一个来源戳**（Extensible Storage Schema GUID 相同），所以
@@ -176,7 +176,7 @@ Irony.dll      SixLabors.Fonts.dll         XLParser.dll
 
 # 使用说明
 
-两个版本的按钮行为一致，**Cleanup 只有 pyRevit 版有**。
+两个版本的按钮行为一致。
 
 ### 📥 Import Excel — 导入
 
@@ -205,7 +205,7 @@ Excel 改了之后按这个。插件会列出项目里所有导入过的视图�
 > 刷新会把视图里的详图线、填充、文字**全部**删掉重画，包括你手工加的。
 > 要写批注、加引线，请加在**图纸上**，不要加在这个视图里面。
 
-### 🧹 Cleanup — 清理（仅 pyRevit 版）
+### 🧹 Cleanup — 清理
 
 项目用久了会积下一堆自动生成的文字类型、填充类型、线样式。
 这个按钮把**没有任何图元在用的**那些扫出来删掉。
@@ -418,7 +418,7 @@ REPORT_MODE = 'auto'     # 默认：只在有警告或有文字放不下时才�
 
 **Q：会不会弄乱我项目里已有的线型 / 文字样式？**
 不会。已存在的类型只被读取和复制，永远不会被改写。插件新建的类型都有明确的命名
-（`Fill Orange EE822F` 这种形式），pyRevit 版还有 Cleanup 按钮可以把不用的清掉。
+（`Fill Orange EE822F` 这种形式），Cleanup 按钮可以把不用的清掉。
 
 # 已知限制
 
@@ -487,10 +487,6 @@ python3 -c "import sys; sys.path.insert(0,'lib'); from eztable import plan, xlre
       原来的卡点已解决：插件改为对着 NuGet 上的 Revit API 引用包编译，CI 每次
       推送都会打出 App Store 安装包。剩下的是发布到用户不登录 GitHub 也能拿到的
       地方（GitHub Release，或审核通过后的 App Store 页面），以及代码签名。
-- [ ] 原生版补 **Cleanup**（清理没人用的 `EZ_*` / `XL_*` 类型）
-- [ ] 原生版的功能区按钮还没有图标（pyRevit 版有）
-- [ ] **原生版能编译，但在这里还没有经过 Revit 实测。** CI 对着 Revit 2026 与 2027
-      的 API 把两个目标都编译通过了，无警告。pyRevit 版已用真实图纸验证，这个还没有。
 - [ ] 原生版的 `FitToText` 用 `System.Drawing` 量文字，pyRevit 版用的是自带的
       Arial 字宽表。两边结果应该一致，但没有逐格比对过
 

@@ -42,17 +42,16 @@ annotatable, and nothing to break.
 | Language | Python (IronPython 2.7) | C# / .NET |
 | Prerequisite | **pyRevit must be installed** | none, it just installs |
 | Revit versions | 2026 – 2027 | 2026 – 2027 |
-| Features | Import + Refresh + **Cleanup** | Import + Refresh |
+| Features | Import + Refresh + Cleanup | Import + Refresh + Cleanup |
 | Third-party deps | none | ClosedXML |
 | Changing settings | edit `config.py`, restart Revit | edit `EZTable.config`, restart Revit |
 | Installing | register one folder | build it yourself, for now |
 
 **How to choose:**
 
-- **Already using pyRevit? Take the pyRevit build.** Easiest to install, and it
-  has Cleanup as well.
-- **Don't want pyRevit? Take the native build.** Cleanup is the only thing you
-  give up.
+- **Already using pyRevit? Take the pyRevit build.** Easiest to install.
+- **Don't want pyRevit? Take the native build.** You give up nothing: both have
+  the same buttons.
 - The **geometry is identical** in both (same unit conversion, same measured
   text calibration, same border merging, same fit-to-text), so the table they
   draw is the same table.
@@ -191,8 +190,7 @@ Irony.dll      SixLabors.Fonts.dll         XLParser.dll
 
 # Using it
 
-The buttons behave the same in both builds. **Cleanup exists only in the pyRevit
-build.**
+The buttons behave the same in both builds.
 
 ### 📥 Import Excel
 
@@ -226,7 +224,7 @@ contents of the view are erased and redrawn.
 > view, including anything you added by hand. Put comments and leaders on the
 > **sheet**, not inside this view.
 
-### 🧹 Cleanup (pyRevit build only)
+### 🧹 Cleanup
 
 Generated text types, fill types and line styles pile up in a project over
 time. This button finds the ones **no element uses** and deletes them.
@@ -468,7 +466,7 @@ native build's file is named `EZTable.config` and not `EZTable.config.sample`.
 **Q: Will it disturb the line styles and text types already in my project?**
 No. Existing types are only read and copied, never overwritten. Types this tool
 creates carry unambiguous names (`Fill Orange EE822F` and the like), and the
-pyRevit build's Cleanup button can remove the unused ones.
+Cleanup button can remove the unused ones.
 
 # Known limitations
 
@@ -546,16 +544,10 @@ python3 -c "import sys; sys.path.insert(0,'lib'); from eztable import plan, xlre
       What remains is publishing it somewhere a user can reach without a
       GitHub login — a Release, or the App Store listing once approved — and
       code-signing it.
-- [ ] Add **Cleanup** to the native build (removing unused `EZ_*` / `XL_*` types)
-- [ ] Give the native build's ribbon buttons icons — the pyRevit build has them
 - [ ] The native build's `FitToText` measures text with `System.Drawing`, while
       the pyRevit build uses its own Arial width table. Both now measure at the
       size the text is actually drawn at, but the two mechanisms have never been
       compared cell by cell.
-- [ ] **The native build compiles, but has not been verified in Revit here.**
-      CI builds both targets cleanly against the Revit 2026 and 2027 API
-      surfaces. The pyRevit build is verified against real drawings; this one
-      is not yet.
 
 ## Code signing policy
 
