@@ -244,6 +244,14 @@ BOLD`, `Fill Grey 242`), which is why the base type and the names in
 from `2.0mm Arial` to `2.1mm Arial`, your `2.0mm Arial` looks exactly like a
 resized copy, and it must never be offered for deletion.
 
+### ℹ️ About
+
+Shows the version and links to the
+[privacy policy](https://www.ezbuild.co.nz/for-revit-privacy.html), the
+[code signing policy](https://www.ezbuild.co.nz/code-signing.html) and the
+website. In the native add-in it works from the start screen too, before any
+document is open. It changes nothing in the model.
+
 ---
 
 # Adjusting the common things
@@ -481,7 +489,7 @@ EZbuild-Revit/
 ├── pyrevit/
 │   └── EZbuild.extension/       pyRevit extension (register the level above it)
 │       ├── EZbuild.tab/             the EZbuild ribbon tab
-│       │   └── A_Table.panel/           Import Excel · Refresh · Cleanup
+│       │   └── A_Table.panel/           Import Excel · Refresh · Cleanup · About
 │       └── lib/eztable/             all the logic, 14 modules
 ├── revit-addin/
 │   └── EZTable/                 C# native add-in — the Table feature's assembly

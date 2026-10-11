@@ -47,6 +47,21 @@
     <PackageReference Include="ClosedXML" Version="0.102.2" />
   </ItemGroup>
 
+  <!-- The version lives in one place: AppVersion in the App Store bundle's
+       PackageContents.xml. It is read here before the assembly attributes are
+       generated, so the About dialog and the source stamp report the version the
+       store was told, and a bump there needs no second edit here. -->
+  <PropertyGroup>
+    <PackageContentsPath>$(MSBuildThisFileDirectory)../EZTable.bundle/PackageContents.xml</PackageContentsPath>
+  </PropertyGroup>
+  <Target Name="VersionFromPackageContents" BeforeTargets="GetAssemblyVersion">
+    <Error Condition="!Exists('$(PackageContentsPath)')" Text="Cannot read the version: $(PackageContentsPath) is missing." />
+    <XmlPeek XmlInputPath="$(PackageContentsPath)" Query="/ApplicationPackage/@AppVersion">
+      <Output TaskParameter="Result" PropertyName="Version" />
+    </XmlPeek>
+    <Error Condition="'$(Version)' == ''" Text="PackageContents.xml has no AppVersion attribute." />
+  </Target>
+
   <ItemGroup>
     <EmbeddedResource Include="Resources\*.png" />
   </ItemGroup>

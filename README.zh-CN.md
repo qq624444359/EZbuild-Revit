@@ -220,6 +220,12 @@ Excel 改了之后按这个。插件会列出项目里所有导入过的视图�
 基准类型从 `2.0mm Arial` 换成 `2.1mm Arial` 之后，你的 `2.0mm Arial`
 看上去就和一个改过字号的副本一模一样，绝不能拿去删。
 
+### ℹ️ About — 关于
+
+显示版本号，并链接到[隐私政策](https://www.ezbuild.co.nz/for-revit-privacy.html)、
+[代码签名政策](https://www.ezbuild.co.nz/code-signing.html)和官网。原生插件版在
+没打开任何项目的开始界面也能用。不改动模型里的任何东西。
+
 ---
 
 # 常见需求怎么调
@@ -431,7 +437,7 @@ EZbuild-Revit/
 ├── pyrevit/
 │   └── EZbuild.extension/       pyRevit 扩展（注册它的上一层目录）
 │       ├── EZbuild.tab/             EZbuild 选项卡
-│       │   └── A_Table.panel/           Import Excel · Refresh · Cleanup
+│       │   └── A_Table.panel/           Import Excel · Refresh · Cleanup · About
 │       └── lib/eztable/             全部逻辑，14 个模块
 ├── revit-addin/
 │   └── EZTable/                 C# 原生插件 —— Table 功能的程序集

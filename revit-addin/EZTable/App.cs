@@ -60,11 +60,24 @@ namespace EZTable
                 Image = LoadImage("Cleanup.png", 16)
             };
 
+            PushButtonData btnAboutData = new PushButtonData(
+                "cmdAbout",
+                "About",
+                thisAssemblyPath,
+                "EZTable.Commands.CmdAbout")
+            {
+                ToolTip = "Version, privacy policy, code signing policy and website.",
+                LargeImage = LoadImage("About.png"),
+                Image = LoadImage("About.png", 16),
+                // Reachable from the start screen too, before any document is open
+                AvailabilityClassName = "EZTable.Commands.AlwaysAvailable"
+            };
+
             // 4. Add the buttons to the panel
             panel.AddItem(btnImportData);
             
-            // Stack the auxiliary functions (Refresh and Cleanup) so they appear smaller
-            panel.AddStackedItems(btnRefreshData, btnCleanupData);
+            // Stack the auxiliary functions (Refresh, Cleanup and About) so they appear smaller
+            panel.AddStackedItems(btnRefreshData, btnCleanupData, btnAboutData);
 
             return Result.Succeeded;
         }
