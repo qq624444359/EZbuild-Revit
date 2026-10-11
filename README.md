@@ -549,6 +549,27 @@ python3 -c "import sys; sys.path.insert(0,'lib'); from eztable import plan, xlre
       surfaces. The pyRevit build is verified against real drawings; this one
       is not yet.
 
+## Code signing policy
+
+Free code signing provided by [SignPath.io](https://about.signpath.io),
+certificate by [SignPath Foundation](https://signpath.org).
+
+The native add-in is applying for this; until signing is in place its Windows
+files are unsigned. Only files built from this repository by its
+[GitHub Actions workflow](.github/workflows/build.yml) are submitted for
+signing, and every request is approved by hand. The pyRevit edition is Python
+source, so there is nothing in it to sign.
+
+- **Committers and reviewers:** [qq624444359](https://github.com/qq624444359)
+- **Approvers:** [qq624444359](https://github.com/qq624444359)
+
+**Privacy:** this program will not transfer any information to other networked
+systems unless specifically requested by the user or the person installing or
+operating it. In practice it makes no network connections at all.
+
+The full policy is at
+[ezbuild.co.nz/code-signing.html](https://www.ezbuild.co.nz/code-signing.html).
+
 ## Licence
 
 [MIT](LICENSE) © 2026 EZbuild

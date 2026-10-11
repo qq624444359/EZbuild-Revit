@@ -488,6 +488,25 @@ python3 -c "import sys; sys.path.insert(0,'lib'); from eztable import plan, xlre
 - [ ] 原生版的 `FitToText` 用 `System.Drawing` 量文字，pyRevit 版用的是自带的
       Arial 字宽表。两边结果应该一致，但没有逐格比对过
 
+## 代码签名政策（Code signing policy）
+
+Free code signing provided by [SignPath.io](https://about.signpath.io),
+certificate by [SignPath Foundation](https://signpath.org).
+
+原生插件版正在申请上述免费签名；签名落实之前，其 Windows 文件均未签名。只有本仓库
+[GitHub Actions 工作流](.github/workflows/build.yml) 从源码构建出的文件才会提交签名，
+且每一次签名请求都经人工批准。pyRevit 版是 Python 源码，没有需要签名的文件。
+
+- **提交者与审阅者（Committers and reviewers）：** [qq624444359](https://github.com/qq624444359)
+- **批准者（Approvers）：** [qq624444359](https://github.com/qq624444359)
+
+**隐私：** This program will not transfer any information to other networked
+systems unless specifically requested by the user or the person installing or
+operating it. 本插件实际上不发起任何网络连接。
+
+完整政策见
+[ezbuild.co.nz/code-signing.html](https://www.ezbuild.co.nz/code-signing.html)。
+
 ## 许可
 
 [MIT](LICENSE) © 2026 EZbuild
