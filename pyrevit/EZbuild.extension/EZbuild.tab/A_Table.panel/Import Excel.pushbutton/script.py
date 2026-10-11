@@ -45,7 +45,16 @@ def main():
     try:
         sheet_names = list_sheets(path)
     except Exception as exc:
-        forms.alert('Could not open that file:\n%s' % exc,
+        # Same advice as the native add-in's warning: the usual fix for a
+        # workbook that will not open is to have Excel write a fresh copy
+        forms.alert('Could not open that file.\n\n'
+                    'It may be damaged, password-protected, an old .xls renamed '
+                    'to .xlsx, or saved by a program that writes non-standard '
+                    '.xlsx files.\n\n'
+                    'How to fix it: open it in Microsoft Excel and use File > '
+                    'Save As > Excel Workbook (*.xlsx) to save a fresh copy - '
+                    'removing any password first - then import that.',
+                    sub_msg='%s' % exc,
                     title='EZTable', exitscript=True)
         return
 

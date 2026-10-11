@@ -38,7 +38,16 @@ namespace EZTable.Commands
                         return Result.Cancelled;
 
                     string filePath = ofd.FileName;
-                    string sheetName = PickSheet(filePath);
+                    string sheetName;
+                    try
+                    {
+                        sheetName = PickSheet(filePath);
+                    }
+                    catch (Utils.UnreadableWorkbookException ex)
+                    {
+                        ShowUnreadable(ex);
+                        return Result.Failed;
+                    }
                     if (sheetName == null)
                         return Result.Cancelled;
 
@@ -46,6 +55,11 @@ namespace EZTable.Commands
                     try
                     {
                         job = new TableJob(filePath, sheetName).Prepare(doc);
+                    }
+                    catch (Utils.UnreadableWorkbookException ex)
+                    {
+                        ShowUnreadable(ex);
+                        return Result.Failed;
                     }
                     catch (Exception ex)
                     {
@@ -95,11 +109,7 @@ namespace EZTable.Commands
         private static string PickSheet(string filePath)
         {
             List<string> sheetNames;
-            // FileShare.ReadWrite so the file can be read even while the user
-            // has it open in Excel
-            using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read,
-                                           FileShare.ReadWrite))
-            using (var wb = new ClosedXML.Excel.XLWorkbook(fs))
+            using (var wb = Utils.WorkbookLoader.Open(filePath, out _))
             {
                 sheetNames = wb.Worksheets.Select(ws => ws.Name).ToList();
             }
@@ -111,6 +121,24 @@ namespace EZTable.Commands
 
             var selector = new UI.SheetSelector(sheetNames);
             return selector.ShowDialog() == true ? selector.SelectedSheet : null;
+        }
+
+        /// <summary>
+        /// A workbook that will not open is the user's to fix, not a crash: say
+        /// what is wrong and how to fix it. The full path and the original error
+        /// sit behind "Show details", for a support email.
+        /// </summary>
+        private static void ShowUnreadable(Utils.UnreadableWorkbookException ex)
+        {
+            var dialog = new TaskDialog("EZTable")
+            {
+                MainIcon = Autodesk.Revit.UI.TaskDialogIcon.TaskDialogIconWarning,
+                MainInstruction = "Could not open " + Path.GetFileName(ex.FilePath),
+                MainContent = ex.Summary + "\n\nHow to fix it: " + ex.Fix,
+                ExpandedContent = ex.FilePath + (ex.Detail.Length > 0 ? "\n\n" + ex.Detail : ""),
+                CommonButtons = TaskDialogCommonButtons.Close,
+            };
+            dialog.Show();
         }
 
         /// <summary>

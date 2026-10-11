@@ -69,13 +69,15 @@ namespace EZTable.Core
             Config.EnsureLoaded();
             SourceHash = Revit.Storage.FileHash(Path);
 
-            // FileShare.ReadWrite so the file can be read even while the user
-            // has it open in Excel
-            using (var fs = new FileStream(Path, FileMode.Open, FileAccess.Read,
-                                           FileShare.ReadWrite))
-            using (var wb = new XLWorkbook(fs))
+            using (var wb = Utils.WorkbookLoader.Open(Path, out bool propertiesIgnored))
             {
                 Data = Utils.ExcelParser.ParseSheet(wb, SheetName);
+                if (propertiesIgnored)
+                    Data.Warnings.Add(
+                        "This file's document properties (author, dates) are stored in a " +
+                        "non-standard form, so they were ignored. The table itself was read " +
+                        "normally. Saving the file again from Excel (File > Save As > Excel " +
+                        "Workbook) removes this note.");
             }
             double? baseCapFt = new Revit.StyleFactory(doc).BaseTextCapHeightFt();
             Drawings = Plan.BuildPlans(Data, baseCapFt);

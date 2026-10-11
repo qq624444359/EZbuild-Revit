@@ -78,6 +78,7 @@ namespace EZTable.Commands
                 var done = new List<string>();
                 var skipped = new List<string>();
                 var failed = new List<string>();
+                var fixes = new List<string>();
                 var created = new List<string>();
                 var emptied = new List<string>();
 
@@ -121,6 +122,13 @@ namespace EZTable.Commands
                             created.AddRange(outcome.Item2.Select(v => v.Name));
                             emptied.AddRange(outcome.Item3.Select(v => v.Name));
                         }
+                        catch (Utils.UnreadableWorkbookException ex)
+                        {
+                            // One line per table; the fix is said once, below
+                            t.RollBack();
+                            failed.Add(entry.Views[0].Name + " - " + ex.Summary);
+                            if (!fixes.Contains(ex.Fix)) fixes.Add(ex.Fix);
+                        }
                         catch (Exception ex)
                         {
                             t.RollBack();
@@ -129,7 +137,7 @@ namespace EZTable.Commands
                     }
                 }
 
-                Summarise(done, skipped, failed, created, emptied);
+                Summarise(done, skipped, failed, fixes, created, emptied);
                 return failed.Count > 0 && done.Count == 0 ? Result.Failed : Result.Succeeded;
             }
             catch (Exception ex)
@@ -142,8 +150,8 @@ namespace EZTable.Commands
         // Refresh is an explicit action, so always report the outcome; failures
         // and skips have to be visible
         private static void Summarise(List<string> done, List<string> skipped,
-                                      List<string> failed, List<string> created,
-                                      List<string> emptied)
+                                      List<string> failed, List<string> fixes,
+                                      List<string> created, List<string> emptied)
         {
             var lines = new List<string>
             {
@@ -156,6 +164,8 @@ namespace EZTable.Commands
                 lines.Add("\nSkipped:\n  " + string.Join("\n  ", skipped));
             if (failed.Count > 0)
                 lines.Add("\nFailed:\n  " + string.Join("\n  ", failed));
+            if (fixes.Count > 0)
+                lines.Add("\nHow to fix it:\n  " + string.Join("\n  ", fixes));
 
             // A workbook that grew or shrank changes how many sheets its table
             // needs. Both directions need saying out loud: a new view is not on
