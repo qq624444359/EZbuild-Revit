@@ -123,11 +123,14 @@ pyrevit reload
 
 ## B. 原生插件版
 
-目前**需要自己编译**（还没有提供打包好的安装程序）。
+还没有打包好的安装程序。每次推送只要动了插件代码，GitHub Actions 就会自动编译，
+构建结果里的 **`EZTable.bundle`** 产物就是两个 Revit 版本都齐全的 Autodesk
+App Store 安装包——在 [Actions 页面](https://github.com/qq624444359/EZbuild-Revit/actions/workflows/build.yml)
+下载（需要登录 GitHub，产物 90 天后过期）。不然就自己编译：
 
-**需要**：Visual Studio 2022 + .NET SDK，本机装有对应版本的 Revit。两个受支持的
-Revit 跑在不同运行时上，所以装哪个 SDK 取决于你要编哪个版本——Revit 2026 用
-.NET 8，Revit 2027 用 .NET 10。
+**需要**：Visual Studio 2022 + .NET SDK。编译**不需要**装 Revit——Revit API 来自
+NuGet 上的引用包——只有运行时才需要。两个受支持的 Revit 跑在不同运行时上，所以
+装哪个 SDK 取决于你要编哪个版本：Revit 2026 用 .NET 8，Revit 2027 用 .NET 10。
 
 ```
 git clone https://github.com/qq624444359/EZbuild-Revit.git
@@ -142,24 +145,19 @@ dotnet build -c Release
 | `net8.0-windows` | 2026 | .NET 8 |
 | `net10.0-windows` | 2027 | .NET 10 |
 
-两个一起编需要两套 SDK、两个 Revit 都装。只装了其中一个的话，指定那个目标即可
-——注意每个目标各自去找自己那版 Revit，分别是
-`C:\Program Files\Autodesk\Revit 2026` 和 `…\Revit 2027`。
+两个一起编需要两套 SDK。只装了其中一个的话，指定那个目标即可——
 **不用改工程文件**：
 
 ```
-# 只装了 Revit 2026
+# 只装了 .NET 8 SDK（Revit 2026）
 dotnet build -c Release -p:TargetFrameworks=net8.0-windows
 
-# 只装了 Revit 2027
+# 只装了 .NET 10 SDK（Revit 2027）
 dotnet build -c Release -p:TargetFrameworks=net10.0-windows
-
-# Revit 装在别的盘
-dotnet build -c Release -p:TargetFrameworks=net10.0-windows -p:RevitApiDir="D:\Autodesk\Revit 2027"
 ```
 
-找不到 `RevitAPI.dll` 时会直接报一句人话告诉你该传什么参数，
-而不是甩一屏「找不到类型 Document」。
+Revit API 引用包在 `EZTable.csproj` 里锁定了确切版本，同一个提交永远对着同一套
+API 编译。
 
 编译成功后会**自动**把 `.addin` 和所有 `.dll` 复制到该目标所属 Revit 的 Addins
 目录——net8.0 目标进 `…\Addins\2026\`，net10.0 目标进 `…\Addins\2027\`。
@@ -480,12 +478,13 @@ python3 -c "import sys; sys.path.insert(0,'lib'); from eztable import plan, xlre
 ## 待办
 
 - [ ] **提供编译好的安装包**，省得用户自己装 Visual Studio。
-      卡在一个现实问题上：GitHub 的构建机器上没有装 Revit，也就没有
-      `RevitAPI.dll`，所以现在这套编译方式在 CI 上跑不起来。要么改用
-      NuGet 上的 Revit API 包，要么自己找一台装了 Revit 的机器打包。
+      原来的卡点已解决：插件改为对着 NuGet 上的 Revit API 引用包编译，CI 每次
+      推送都会打出 App Store 安装包。剩下的是发布到用户不登录 GitHub 也能拿到的
+      地方（GitHub Release，或审核通过后的 App Store 页面），以及代码签名。
 - [ ] 原生版补 **Cleanup**（清理没人用的 `EZ_*` / `XL_*` 类型）
 - [ ] 原生版的功能区按钮还没有图标（pyRevit 版有）
-- [ ] **原生版从未编译过**，更没在 Revit 里跑过。pyRevit 版已用真实图纸验证，这个还没有。
+- [ ] **原生版能编译，但在这里还没有经过 Revit 实测。** CI 对着 Revit 2026 与 2027
+      的 API 把两个目标都编译通过了，无警告。pyRevit 版已用真实图纸验证，这个还没有。
 - [ ] 原生版的 `FitToText` 用 `System.Drawing` 量文字，pyRevit 版用的是自带的
       Arial 字宽表。两边结果应该一致，但没有逐格比对过
 

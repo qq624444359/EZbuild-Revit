@@ -1,0 +1,75 @@
+# Builds the native add-in for both supported Revits and assembles the
+# Autodesk App Store bundle from the result.
+#
+# Every release binary should come out of here rather than off a developer's
+# machine: it is reproducible from the commit, and it is the precondition for
+# code signing, which requires the signed binary to be built from source in CI.
+
+name: Build
+
+on:
+  push:
+    paths:
+      - "revit-addin/**"
+      - ".github/workflows/build.yml"
+  pull_request:
+    paths:
+      - "revit-addin/**"
+      - ".github/workflows/build.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # One SDK per supported Revit: 2026 runs on .NET 8, 2027 on .NET 10.
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Build both targets
+        run: dotnet build revit-addin/EZTable/EZTable.csproj -c Release
+
+      # Same file set PostBuild installs locally: the DLLs and the config
+      # sample, next to the manifest that is already checked in for each series.
+      - name: Assemble EZTable.bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cp -r revit-addin/EZTable.bundle dist/
+          for pair in net8.0-windows:2026 net10.0-windows:2027; do
+            tfm="${pair%%:*}"
+            series="${pair##*:}"
+            out="revit-addin/EZTable/bin/Release/$tfm"
+            dest="dist/EZTable.bundle/Contents/$series"
+            test -f "$out/EZTable.dll"  || { echo "::error::$tfm build produced no EZTable.dll"; exit 1; }
+            test -f "$dest/EZTable.addin" || { echo "::error::no manifest checked in for Revit $series"; exit 1; }
+            cp "$out"/*.dll "$dest/"
+            cp revit-addin/EZTable/EZTable.config.sample "$dest/"
+          done
+
+      # Revit supplies its own API assemblies at load time. A copy shipped in
+      # the bundle would shadow them, so fail loudly if one ever slips in.
+      - name: Check no Revit API assemblies are bundled
+        shell: bash
+        run: |
+          if find dist -iname 'RevitAPI*.dll' | grep -q .; then
+            echo "::error::Revit API assemblies found in the bundle:"
+            find dist -iname 'RevitAPI*.dll'
+            exit 1
+          fi
+          find dist -type f | sort
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: EZTable.bundle
+          path: dist/
+          if-no-files-found: error

@@ -131,11 +131,17 @@ Folder → pick `D:\EZbuild-Revit\pyrevit` → Save Settings and Reload.
 
 ## B. Native add-in
 
-For now this **has to be built yourself**; there is no packaged installer yet.
+There is no packaged installer yet. Every push that touches the add-in is built
+on GitHub Actions, and the run's **`EZTable.bundle`** artifact is the Autodesk
+App Store bundle for both Revits — download it from the
+[Actions tab](https://github.com/qq624444359/EZbuild-Revit/actions/workflows/build.yml)
+(needs a GitHub login; artifacts expire after 90 days). Otherwise, build it
+yourself:
 
-**Requires**: Visual Studio 2022 or the .NET SDK, plus the matching Revit
-installed locally. The two supported Revits are on different runtimes, so the
-SDK you need depends on which you are building for — .NET 8 for Revit 2026,
+**Requires**: Visual Studio 2022 or the .NET SDK. Revit itself is **not**
+needed to build — the Revit API comes from reference packages on NuGet — only
+to run the result. The two supported Revits are on different runtimes, so the
+SDK you need depends on which you are building for: .NET 8 for Revit 2026,
 .NET 10 for Revit 2027.
 
 ```
@@ -152,25 +158,19 @@ two do not share a runtime:
 | `net8.0-windows` | 2026 | .NET 8 |
 | `net10.0-windows` | 2027 | .NET 10 |
 
-Building both at once needs both SDKs and both Revits installed. With only one
-of them present, name that target — and note that each target looks for its own
-Revit, so `C:\Program Files\Autodesk\Revit 2026` and `…\Revit 2027`
-respectively. **There is no need to edit the project file**:
+Building both at once needs both SDKs. With only one installed, name that
+target — **there is no need to edit the project file**:
 
 ```
-# only Revit 2026 installed
+# only the .NET 8 SDK (Revit 2026)
 dotnet build -c Release -p:TargetFrameworks=net8.0-windows
 
-# only Revit 2027 installed
+# only the .NET 10 SDK (Revit 2027)
 dotnet build -c Release -p:TargetFrameworks=net10.0-windows
-
-# Revit installed on another drive
-dotnet build -c Release -p:TargetFrameworks=net10.0-windows -p:RevitApiDir="D:\Autodesk\Revit 2027"
 ```
 
-When `RevitAPI.dll` cannot be found, the build says so in plain language and
-names the argument to pass, rather than emitting a screen of "the type Document
-could not be found".
+The Revit API packages are pinned to exact versions in `EZTable.csproj`, so a
+given commit always compiles against the same API surface.
 
 A successful build **automatically** copies the `.addin` and every `.dll` into
 the Addins folder of the Revit that target belongs to — `…\Addins\2026\` for
@@ -533,18 +533,21 @@ python3 -c "import sys; sys.path.insert(0,'lib'); from eztable import plan, xlre
 ## To do
 
 - [ ] **Ship a prebuilt installer** so nobody has to install Visual Studio.
-      Blocked on something real: GitHub's build machines have no Revit
-      installed and therefore no `RevitAPI.dll`, so the current reference
-      scheme cannot run in CI. Either switch to the Revit API NuGet packages,
-      or package from a machine that has Revit.
+      The blocker is gone: the add-in now compiles against the Revit API
+      reference packages, and CI builds the App Store bundle on every push.
+      What remains is publishing it somewhere a user can reach without a
+      GitHub login — a Release, or the App Store listing once approved — and
+      code-signing it.
 - [ ] Add **Cleanup** to the native build (removing unused `EZ_*` / `XL_*` types)
 - [ ] Give the native build's ribbon buttons icons — the pyRevit build has them
 - [ ] The native build's `FitToText` measures text with `System.Drawing`, while
       the pyRevit build uses its own Arial width table. Both now measure at the
       size the text is actually drawn at, but the two mechanisms have never been
       compared cell by cell.
-- [ ] **Nothing in the native build has ever been compiled**, let alone run in
-      Revit. The pyRevit build is verified against real drawings; this one is not.
+- [ ] **The native build compiles, but has not been verified in Revit here.**
+      CI builds both targets cleanly against the Revit 2026 and 2027 API
+      surfaces. The pyRevit build is verified against real drawings; this one
+      is not yet.
 
 ## Licence
 
