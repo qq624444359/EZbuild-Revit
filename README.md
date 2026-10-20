@@ -554,14 +554,14 @@ The version lives in one place: `AppVersion` in
 the About dialog and each source stamp are all read from it at build time.
 
 1. Bump `AppVersion` there and commit it to `main`.
-2. Tag that commit and push the tag:
-   ```
-   git tag v1.0.1
-   git push origin v1.0.1
-   ```
-3. CI builds both targets, checks that the tag matches `AppVersion`, and
-   publishes a GitHub Release with `EZTable.bundle.zip` attached. Download links
-   point at `releases/latest`, so they pick the new release up by themselves.
+2. On GitHub, open **Actions > Build > Run workflow**, keep the branch on
+   `main`, tick **Publish a release**, and run it. (Or push a tag yourself:
+   `git tag v1.0.1 && git push origin v1.0.1`.)
+3. CI builds both targets and publishes a GitHub Release tagged
+   `v<AppVersion>`, with `EZTable.bundle.zip` attached. A pushed tag that does
+   not match `AppVersion` is refused, as is a version already released.
+   Download links point at `releases/latest`, so they pick the new release up
+   by themselves.
 
 Upload the same zip to the Autodesk App Store under the same version number.
 

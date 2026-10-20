@@ -1,6 +1,9 @@
 # Builds the native add-in for both supported Revits and assembles the
-# Autodesk App Store bundle from the result. Pushing a version tag (v1.2.3)
-# also publishes that bundle as a GitHub Release.
+# Autodesk App Store bundle from the result. It also publishes the bundle as a
+# GitHub Release, either way round:
+#   - Actions > Build > Run workflow on main, with "Publish a release" ticked;
+#     the tag v<AppVersion> is created for you
+#   - or push a version tag (v1.2.3) yourself
 #
 # Every release binary should come out of here rather than off a developer's
 # machine: it is reproducible from the commit, and it is the precondition for
@@ -26,6 +29,11 @@ on:
       - "THIRD-PARTY-NOTICES.txt"
       - "LICENSE"
   workflow_dispatch:
+    inputs:
+      release:
+        description: "Publish a release of this build, tagged v<AppVersion> (main only)"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -110,7 +118,7 @@ jobs:
   # always serves the newest release.
   release:
     needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.release)
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -123,15 +131,26 @@ jobs:
           path: dist
 
       # The tag, the store listing and the About dialog must all name the same
-      # version, and PackageContents.xml is where it is kept.
-      - name: Check the tag matches the bundle version
+      # version, and PackageContents.xml is where it is kept. A pushed tag must
+      # match it; a release started from the Actions page takes its tag from it.
+      - name: Work out the version and tag
         run: |
           set -euo pipefail
-          tag="${GITHUB_REF_NAME#v}"
           app=$(grep -oP 'AppVersion="\K[^"]+' revit-addin/EZTable.bundle/PackageContents.xml)
-          if [ "$tag" != "$app" ]; then
-            echo "::error::tag $GITHUB_REF_NAME does not match AppVersion $app in PackageContents.xml"
-            exit 1
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            if [ "${GITHUB_REF_NAME#v}" != "$app" ]; then
+              echo "::error::tag $GITHUB_REF_NAME does not match AppVersion $app in PackageContents.xml"
+              exit 1
+            fi
+            echo "TAG=$GITHUB_REF_NAME" >> "$GITHUB_ENV"
+            echo "TAG_SOURCE=--verify-tag" >> "$GITHUB_ENV"
+          else
+            if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+              echo "::error::releases are published from main only, not $GITHUB_REF"
+              exit 1
+            fi
+            echo "TAG=v$app" >> "$GITHUB_ENV"
+            echo "TAG_SOURCE=--target=$GITHUB_SHA" >> "$GITHUB_ENV"
           fi
           echo "VERSION=$app" >> "$GITHUB_ENV"
 
@@ -164,5 +183,7 @@ jobs:
           [Product page](https://www.ezbuild.co.nz/for-revit.html) · [Privacy policy](https://www.ezbuild.co.nz/for-revit-privacy.html) · [Code signing policy](https://www.ezbuild.co.nz/code-signing.html)
           EOF
           sed -i "s/^          //; s/__VERSION__/$VERSION/; s/__SHA256__/$SHA256/" notes.md
-          gh release create "$GITHUB_REF_NAME" EZTable.bundle.zip \
-            --title "EZTable $VERSION" --notes-file notes.md --verify-tag
+          # Fails rather than overwrites if this version was already released:
+          # bump AppVersion for a new one
+          gh release create "$TAG" EZTable.bundle.zip \
+            --title "EZTable $VERSION" --notes-file notes.md "$TAG_SOURCE"

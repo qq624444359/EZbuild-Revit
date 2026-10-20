@@ -498,13 +498,11 @@ python3 -c "import sys; sys.path.insert(0,'lib'); from eztable import plan, xlre
 `AppVersion`。插件的程序集版本、About 窗口、来源戳里的版本号都在编译时从这里读取。
 
 1. 改 `AppVersion`，提交到 `main`。
-2. 给这个提交打标签并推送：
-   ```
-   git tag v1.0.1
-   git push origin v1.0.1
-   ```
-3. CI 编译两个目标，核对标签与 `AppVersion` 一致，然后发布 GitHub Release，附上
-   `EZTable.bundle.zip`。下载链接指向 `releases/latest`，会自动指到新版本。
+2. 在 GitHub 上打开 **Actions > Build > Run workflow**，分支保持 `main`，勾选
+   **Publish a release**，运行。（也可以自己推标签：`git tag v1.0.1 && git push origin v1.0.1`。）
+3. CI 编译两个目标，发布标签为 `v<AppVersion>` 的 GitHub Release，附上
+   `EZTable.bundle.zip`。推送的标签与 `AppVersion` 不一致会被拒绝，已经发布过的
+   版本号也会被拒绝。下载链接指向 `releases/latest`，会自动指到新版本。
 
 上传到 Autodesk App Store 的也是同一个 zip，用同一个版本号。
 
