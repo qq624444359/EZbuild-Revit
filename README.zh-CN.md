@@ -43,7 +43,7 @@ EZTable 走第四条路：**把 Excel 直接画成 Revit 原生图元**（详图
 | 功能 | Import + Refresh + Cleanup | Import + Refresh + Cleanup |
 | 第三方依赖 | 无 | ClosedXML |
 | 改配置 | 改 `config.py`，重启 Revit | 改 `EZTable.config`，重开 Revit |
-| 安装 | 注册一个文件夹 | 目前要自己编译 |
+| 安装 | 注册一个文件夹 | 下载后解压 |
 
 **怎么选：**
 
@@ -123,10 +123,21 @@ pyrevit reload
 
 ## B. 原生插件版
 
-还没有打包好的安装程序。每次推送只要动了插件代码，GitHub Actions 就会自动编译，
-构建结果里的 **`EZTable.bundle`** 产物就是两个 Revit 版本都齐全的 Autodesk
-App Store 安装包——在 [Actions 页面](https://github.com/qq624444359/EZbuild-Revit/actions/workflows/build.yml)
-下载（需要登录 GitHub，产物 90 天后过期）。不然就自己编译：
+**下载最新版本：**[EZTable.bundle.zip](https://github.com/qq624444359/EZbuild-Revit/releases/latest/download/EZTable.bundle.zip)——不用登录 GitHub，里面同时包含
+Revit 2026 和 Revit 2027 的版本。
+
+1. 关闭 Revit，解压下载的文件。
+2. 把 `EZTable.bundle` 文件夹移到 `%AppData%\Autodesk\ApplicationPlugins`
+   （没有 `ApplicationPlugins` 文件夹就新建一个）。
+3. 打开 Revit，命令在 **EZbuild** 选项卡的 **Table** 面板里。
+
+安装包目前还没有代码签名，Revit 第一次启动时可能会询问是否加载 EZTable，选
+**Always Load**。卸载：关闭 Revit，删掉 `EZTable.bundle` 文件夹即可。
+
+每次推送只要动了插件代码，GitHub Actions 也会自动编译；每次构建的 `EZTable.bundle`
+产物就是那个提交的版本（需要登录 GitHub，保留 90 天）。
+
+### 自己编译
 
 **需要**：Visual Studio 2022 + .NET SDK。编译**不需要**装 Revit——Revit API 来自
 NuGet 上的引用包——只有运行时才需要。两个受支持的 Revit 跑在不同运行时上，所以
@@ -481,12 +492,29 @@ cd pyrevit/EZbuild.extension
 python3 -c "import sys; sys.path.insert(0,'lib'); from eztable import plan, xlreader; print('ok')"
 ```
 
+### 发布新版本
+
+版本号只在一个地方维护：`revit-addin/EZTable.bundle/PackageContents.xml` 里的
+`AppVersion`。插件的程序集版本、About 窗口、来源戳里的版本号都在编译时从这里读取。
+
+1. 改 `AppVersion`，提交到 `main`。
+2. 给这个提交打标签并推送：
+   ```
+   git tag v1.0.1
+   git push origin v1.0.1
+   ```
+3. CI 编译两个目标，核对标签与 `AppVersion` 一致，然后发布 GitHub Release，附上
+   `EZTable.bundle.zip`。下载链接指向 `releases/latest`，会自动指到新版本。
+
+上传到 Autodesk App Store 的也是同一个 zip，用同一个版本号。
+
+增加、删除或升级打包进去的库时，要同步更新 `THIRD-PARTY-NOTICES.txt`：包里出现
+清单上没有的 DLL，构建会直接失败。
+
 ## 待办
 
-- [ ] **提供编译好的安装包**，省得用户自己装 Visual Studio。
-      原来的卡点已解决：插件改为对着 NuGet 上的 Revit API 引用包编译，CI 每次
-      推送都会打出 App Store 安装包。剩下的是发布到用户不登录 GitHub 也能拿到的
-      地方（GitHub Release，或审核通过后的 App Store 页面），以及代码签名。
+- [ ] **给发布的安装包做代码签名。** 正在申请 SignPath Foundation，见下方代码签名
+      政策。签名之前，Revit 加载时会先询问。
 - [ ] 原生版的 `FitToText` 用 `System.Drawing` 量文字，pyRevit 版用的是自带的
       Arial 字宽表。两边结果应该一致，但没有逐格比对过
 
@@ -517,5 +545,6 @@ operating it. 本插件实际上不发起任何网络连接。
 
 > 原生插件版依赖 [ClosedXML](https://github.com/ClosedXML/ClosedXML)（MIT）及其
 > 传递依赖 DocumentFormat.OpenXml、SixLabors.Fonts、XLParser、Irony、
-> ExcelNumberFormat，分发编译产物时这些库各自的许可证也要一并带上。
+> ExcelNumberFormat。它们的许可证都在 [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt)
+> 里，CI 打出的每个安装包都会附带；自己编译分发的话，也要把它一起带上。
 > pyRevit 扩展版零依赖，不涉及这个问题。

@@ -45,7 +45,7 @@ annotatable, and nothing to break.
 | Features | Import + Refresh + Cleanup | Import + Refresh + Cleanup |
 | Third-party deps | none | ClosedXML |
 | Changing settings | edit `config.py`, restart Revit | edit `EZTable.config`, restart Revit |
-| Installing | register one folder | build it yourself, for now |
+| Installing | register one folder | download and unzip |
 
 **How to choose:**
 
@@ -130,12 +130,23 @@ Folder → pick `D:\EZbuild-Revit\pyrevit` → Save Settings and Reload.
 
 ## B. Native add-in
 
-There is no packaged installer yet. Every push that touches the add-in is built
-on GitHub Actions, and the run's **`EZTable.bundle`** artifact is the Autodesk
-App Store bundle for both Revits — download it from the
-[Actions tab](https://github.com/qq624444359/EZbuild-Revit/actions/workflows/build.yml)
-(needs a GitHub login; artifacts expire after 90 days). Otherwise, build it
-yourself:
+**Download the latest release:** [EZTable.bundle.zip](https://github.com/qq624444359/EZbuild-Revit/releases/latest/download/EZTable.bundle.zip) — no GitHub login
+needed. It holds the builds for both Revit 2026 and Revit 2027.
+
+1. Close Revit, and unzip the download.
+2. Move the `EZTable.bundle` folder into `%AppData%\Autodesk\ApplicationPlugins`
+   (create `ApplicationPlugins` if it is not there).
+3. Start Revit. The commands are on the **EZbuild** tab, in the **Table** panel.
+
+The files are not code-signed yet, so Revit may ask whether to load EZTable the
+first time. Choose **Always Load**. To uninstall, close Revit and delete the
+`EZTable.bundle` folder.
+
+Every push that touches the add-in is also built on GitHub Actions; a run's
+`EZTable.bundle` artifact holds that commit's build (GitHub login needed, kept
+for 90 days).
+
+### Building it yourself
 
 **Requires**: Visual Studio 2022 or the .NET SDK. Revit itself is **not**
 needed to build — the Revit API comes from reference packages on NuGet — only
@@ -536,14 +547,32 @@ cd pyrevit/EZbuild.extension
 python3 -c "import sys; sys.path.insert(0,'lib'); from eztable import plan, xlreader; print('ok')"
 ```
 
+### Releasing
+
+The version lives in one place: `AppVersion` in
+`revit-addin/EZTable.bundle/PackageContents.xml`. The add-in's assembly version,
+the About dialog and each source stamp are all read from it at build time.
+
+1. Bump `AppVersion` there and commit it to `main`.
+2. Tag that commit and push the tag:
+   ```
+   git tag v1.0.1
+   git push origin v1.0.1
+   ```
+3. CI builds both targets, checks that the tag matches `AppVersion`, and
+   publishes a GitHub Release with `EZTable.bundle.zip` attached. Download links
+   point at `releases/latest`, so they pick the new release up by themselves.
+
+Upload the same zip to the Autodesk App Store under the same version number.
+
+When a bundled library is added, removed or upgraded, update
+`THIRD-PARTY-NOTICES.txt`: the build fails if the bundle holds a DLL it does not
+list.
+
 ## To do
 
-- [ ] **Ship a prebuilt installer** so nobody has to install Visual Studio.
-      The blocker is gone: the add-in now compiles against the Revit API
-      reference packages, and CI builds the App Store bundle on every push.
-      What remains is publishing it somewhere a user can reach without a
-      GitHub login — a Release, or the App Store listing once approved — and
-      code-signing it.
+- [ ] **Code-sign the release.** Applying to SignPath Foundation; see the
+      code signing policy below. Until then Revit asks before loading it.
 - [ ] The native build's `FitToText` measures text with `System.Drawing`, while
       the pyRevit build uses its own Arial width table. Both now measure at the
       size the text is actually drawn at, but the two mechanisms have never been
@@ -579,5 +608,7 @@ keep the copyright notice.
 
 > The native add-in depends on [ClosedXML](https://github.com/ClosedXML/ClosedXML)
 > (MIT) and, transitively, on DocumentFormat.OpenXml, SixLabors.Fonts, XLParser,
-> Irony and ExcelNumberFormat. When distributing compiled output, their licences
-> have to travel with it. The pyRevit build has no dependencies and is unaffected.
+> Irony and ExcelNumberFormat. Their licences are in
+> [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt), which CI places in every
+> bundle it builds; anyone distributing a build of their own must ship it too.
+> The pyRevit build has no dependencies and is unaffected.
