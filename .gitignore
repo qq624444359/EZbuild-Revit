@@ -22,3 +22,6 @@ __pycache__/
 # Windows
 Thumbs.db
 desktop.ini
+
+# Bundle assembled locally by the CI steps
+dist/
