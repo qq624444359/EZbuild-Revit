@@ -14,6 +14,8 @@ skipped, so no elements are taken down with it.
 from __future__ import division, unicode_literals
 
 __title__ = 'Cleanup'
+# F1 over the button opens this, as in the native add-in
+__helpurl__ = 'https://www.ezbuild.co.nz/for-revit-help.html#cleanup'
 __doc__ = ('Delete leftover EZ_* and XL_* text types, filled region types, line '
            'styles and line patterns that no element uses any more. Anything '
            'still in use is listed but never touched.')

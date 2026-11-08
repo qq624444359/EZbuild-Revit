@@ -10,6 +10,8 @@ and runs on pyRevit's default IronPython engine. The netcore build of pyRevit
 from __future__ import division, unicode_literals
 
 __title__ = 'Import\nExcel'
+# F1 over the button opens this, as in the native add-in
+__helpurl__ = 'https://www.ezbuild.co.nz/for-revit-help.html#import-excel'
 __doc__ = ('Draw an Excel worksheet into a 1:1 drafting view using detail lines, '
            'filled regions and text notes. A table too tall for one sheet is '
            'split into a view per part. Each view is stamped with its source so '

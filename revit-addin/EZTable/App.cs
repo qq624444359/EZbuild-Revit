@@ -66,12 +66,20 @@ namespace EZTable
                 thisAssemblyPath,
                 "EZTable.Commands.CmdAbout")
             {
-                ToolTip = "Version, privacy policy, code signing policy and website.",
+                ToolTip = "Version, help, privacy policy, code signing policy and website.",
                 LargeImage = LoadImage("About.png"),
                 Image = LoadImage("About.png", 16),
                 // Reachable from the start screen too, before any document is open
                 AvailabilityClassName = "EZTable.Commands.AlwaysAvailable"
             };
+
+            // F1 over a button opens that command's section of the help page.
+            // Autodesk's marketplace review asks for contextual help on every
+            // ribbon command.
+            btnImportData.SetContextualHelp(Help("import-excel"));
+            btnRefreshData.SetContextualHelp(Help("refresh"));
+            btnCleanupData.SetContextualHelp(Help("cleanup"));
+            btnAboutData.SetContextualHelp(Help("about"));
 
             // 4. Add the buttons to the panel
             panel.AddItem(btnImportData);
@@ -85,6 +93,12 @@ namespace EZTable
         public Result OnShutdown(UIControlledApplication application)
         {
             return Result.Succeeded;
+        }
+
+        private static ContextualHelp Help(string section)
+        {
+            return new ContextualHelp(ContextualHelpType.Url,
+                                      Commands.CmdAbout.HelpUrl + "#" + section);
         }
 
         private System.Windows.Media.ImageSource LoadImage(string name, int size = 32)

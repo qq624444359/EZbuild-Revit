@@ -15,6 +15,8 @@ showing an older revision of the same workbook.
 from __future__ import division, unicode_literals
 
 __title__ = 'Refresh'
+# F1 over the button opens this, as in the native add-in
+__helpurl__ = 'https://www.ezbuild.co.nz/for-revit-help.html#refresh'
 __doc__ = ('Re-read the source Excel files and redraw the tables that changed. '
            'View ids are preserved, so viewports already placed on sheets stay '
            'valid. A table split across several sheets is refreshed as a unit.')

@@ -8,7 +8,8 @@ using TaskDialog = Autodesk.Revit.UI.TaskDialog;
 namespace EZTable.Commands
 {
     /// <summary>
-    /// About -- the version, and links to the privacy and code signing policies.
+    /// About -- the version, and links to the help, the privacy and code signing
+    /// policies and the website.
     ///
     /// The Autodesk marketplace requires the privacy policy to be reachable from
     /// inside the app, not only from the store listing, so this button exists
@@ -23,6 +24,8 @@ namespace EZTable.Commands
         public const string PrivacyUrl = "https://www.ezbuild.co.nz/for-revit-privacy.html";
         public const string CodeSigningUrl = "https://www.ezbuild.co.nz/code-signing.html";
         public const string HomeUrl = "https://www.ezbuild.co.nz/for-revit.html";
+        // F1 on a ribbon button opens its section of this page
+        public const string HelpUrl = "https://www.ezbuild.co.nz/for-revit-help.html";
 
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
@@ -39,16 +42,18 @@ namespace EZTable.Commands
                 CommonButtons = TaskDialogCommonButtons.Close,
                 DefaultButton = TaskDialogResult.Close,
             };
-            dialog.AddCommandLink(TaskDialogCommandLinkId.CommandLink1, "Privacy policy", PrivacyUrl);
-            dialog.AddCommandLink(TaskDialogCommandLinkId.CommandLink2, "Code signing policy", CodeSigningUrl);
-            dialog.AddCommandLink(TaskDialogCommandLinkId.CommandLink3, "Website", HomeUrl);
+            dialog.AddCommandLink(TaskDialogCommandLinkId.CommandLink1, "Help", HelpUrl);
+            dialog.AddCommandLink(TaskDialogCommandLinkId.CommandLink2, "Privacy policy", PrivacyUrl);
+            dialog.AddCommandLink(TaskDialogCommandLinkId.CommandLink3, "Code signing policy", CodeSigningUrl);
+            dialog.AddCommandLink(TaskDialogCommandLinkId.CommandLink4, "Website", HomeUrl);
 
             string url;
             switch (dialog.Show())
             {
-                case TaskDialogResult.CommandLink1: url = PrivacyUrl; break;
-                case TaskDialogResult.CommandLink2: url = CodeSigningUrl; break;
-                case TaskDialogResult.CommandLink3: url = HomeUrl; break;
+                case TaskDialogResult.CommandLink1: url = HelpUrl; break;
+                case TaskDialogResult.CommandLink2: url = PrivacyUrl; break;
+                case TaskDialogResult.CommandLink3: url = CodeSigningUrl; break;
+                case TaskDialogResult.CommandLink4: url = HomeUrl; break;
                 default: return Result.Succeeded;
             }
 

@@ -5,6 +5,7 @@ using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using EZTable.Core;
+using EZTable.UI;
 using EZTable.Revit;
 using TaskDialog = Autodesk.Revit.UI.TaskDialog;
 
@@ -71,7 +72,8 @@ namespace EZTable.Commands
                     .Select(x => x.i)
                     .ToList();
 
-                var dialog = new UI.RefreshSelector(rows, stalePositions);
+                var dialog = new UI.RefreshSelector(rows, stalePositions)
+                    .OwnedBy(commandData.Application.MainWindowHandle);
                 if (dialog.ShowDialog() != true || dialog.SelectedIndices.Count == 0)
                     return Result.Cancelled;
 

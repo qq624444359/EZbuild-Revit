@@ -6,6 +6,7 @@ using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using EZTable.Core;
+using EZTable.UI;
 using TaskDialog = Autodesk.Revit.UI.TaskDialog;
 
 namespace EZTable.Commands
@@ -27,6 +28,7 @@ namespace EZTable.Commands
             {
                 UIDocument uidoc = commandData.Application.ActiveUIDocument;
                 Document doc = uidoc.Document;
+                IntPtr revitWindow = commandData.Application.MainWindowHandle;
 
                 using (var ofd = new System.Windows.Forms.OpenFileDialog
                 {
@@ -34,14 +36,14 @@ namespace EZTable.Commands
                     Title = "Select an Excel File"
                 })
                 {
-                    if (ofd.ShowDialog() != System.Windows.Forms.DialogResult.OK)
+                    if (ofd.ShowDialog(new RevitWindow.Handle(revitWindow)) != System.Windows.Forms.DialogResult.OK)
                         return Result.Cancelled;
 
                     string filePath = ofd.FileName;
                     string sheetName;
                     try
                     {
-                        sheetName = PickSheet(filePath);
+                        sheetName = PickSheet(filePath, revitWindow);
                     }
                     catch (Utils.UnreadableWorkbookException ex)
                     {
@@ -106,7 +108,7 @@ namespace EZTable.Commands
 
         /// <summary>Use the only worksheet when there is one, otherwise show the
         /// picker. Returns null when cancelled.</summary>
-        private static string PickSheet(string filePath)
+        private static string PickSheet(string filePath, IntPtr revitWindow)
         {
             List<string> sheetNames;
             using (var wb = Utils.WorkbookLoader.Open(filePath, out _))
@@ -119,7 +121,7 @@ namespace EZTable.Commands
             if (sheetNames.Count == 1)
                 return sheetNames[0];
 
-            var selector = new UI.SheetSelector(sheetNames);
+            var selector = new UI.SheetSelector(sheetNames).OwnedBy(revitWindow);
             return selector.ShowDialog() == true ? selector.SelectedSheet : null;
         }
 
