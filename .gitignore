@@ -25,3 +25,7 @@ desktop.ini
 
 # Bundle assembled locally by the CI steps
 dist/
+
+# Locally built add-in DLLs and release zips (CI builds these)
+revit-addin/EZTable.bundle/Contents/*/*.dll
+*.zip
